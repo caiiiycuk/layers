@@ -1,97 +1,184 @@
-import { useRef } from "preact/hooks";
+import { JSX } from "preact";
+import { useEffect, useRef } from "preact/hooks";
 import { JoyRing } from "./controls/joy-ring";
-import { useSelector } from "react-redux";
+import { Button } from "./controls/button";
+import { useDispatch, useSelector } from "react-redux";
 import { State } from "./store";
+import { BoxRem, Control, Layer, LayerOnChange, Layout } from "./types";
+import { uiSlice } from "./store/ui";
 
-export type Control = {
-    tag: "joy-arrows",
-    up: number,
-    down: number,
-    left: number,
-    right: number,
-    forwardRange?: number,
-    backwardRange?: number,
-}
-export interface LayerDescription {
-    controls: Control[],
-}
-export interface LayerOnChange {
-    button: (code: number, pressed: boolean) => void;
-}
-
-
-export function Layer(props: {
-    description: LayerDescription,
-    onChange: LayerOnChange
+function LayerComponent(props: {
+    layer: Layer,
+    onChange: LayerOnChange,
 }) {
-    // TODO move out
-    const visible = useSelector((state: State) => state.ui.visible);
+    const scale = useSelector((state: State) => state.ui.scale);
     const layerRef = useRef<HTMLDivElement>(null);
-    const { description, onChange } = props;
-    const pressedCounter: { [code: number]: number } = {};
+    const { layer, onChange } = props;
+    const padding = {
+        left: layer.left ?? 0,
+        right: layer.right ?? 0,
+        top: layer.top ?? 0,
+        bottom: layer.bottom ?? 0,
+    };
+    const actionCounter: { [code: number]: number } = {};
 
-    if (!visible) {
-        return null;
-    }
-
-    function buttonChange(code: number, press: boolean) {
-        if (pressedCounter[code] === undefined) {
-            pressedCounter[code] = 0;
+    function actionChange(code: number, _active: boolean) {
+        if (actionCounter[code] === undefined) {
+            actionCounter[code] = 0;
         }
 
-        const pressed = pressedCounter[code] > 0;
-        pressedCounter[code] += press ? 1 : -1;
-        const newPressed = pressedCounter[code] > 0;
+        const active = actionCounter[code] > 0;
+        actionCounter[code] += _active ? 1 : -1;
+        const newActive = actionCounter[code] > 0;
 
-        if (pressed != newPressed) {
-            onChange.button(code, newPressed);
+        if (active != newActive) {
+            onChange.action(code, newActive);
         }
     }
 
-    return <div ref={layerRef} class="w-full h-full">
-        {description.controls.map((c) => {
-            switch (c.tag) {
-                case "joy-arrows": {
-                    const pressed: boolean[] = [false, false, false, false];
-                    const codes = [c.up, c.down, c.left, c.right];
-                    const forwardRange = c.forwardRange ?? 0.2;
-                    const backwardRange = c.backwardRange ?? 0.2;
-                    return <JoyRing layerRef={layerRef} onChange={(active, angle, distance) => {
-                        const newPressed = [false, false, false, false];
-                        if (active && distance >= 0.25) {
+    function createItem(i: Control | Layout) {
+        switch (i.tag) {
+            case "button": {
+                return <Button
+                    {...i}
+                    onButtonDown={() => {
+                        actionChange(i.action, true);
+                    }}
+                    onButtonUp={() => {
+                        actionChange(i.action, false);
+                    }} />;
+            }
+            case "joy-arrows": {
+                const active: boolean[] = [false, false, false, false];
+                const codes = [i.up, i.down, i.left, i.right];
+                const forwardRange = i.forwardRange ?? 0.2;
+                const backwardRange = i.backwardRange ?? 0.2;
+                return <JoyRing
+                    layerRef={layerRef}
+                    onChange={(joyActive, angle, distance) => {
+                        const newActive = [false, false, false, false];
+                        if (joyActive && distance >= 0.25) {
                             if (angle >= 0 && angle <= forwardRange ||
                                 angle >= Math.PI * 2 - forwardRange && angle <= Math.PI * 2) {
-                                newPressed[0] = true;
+                                newActive[0] = true;
                             } else if (angle >= Math.PI - backwardRange &&
                                 angle <= Math.PI + backwardRange) {
-                                newPressed[1] = true;
+                                newActive[1] = true;
                             } else {
                                 if (angle >= 0 && angle <= Math.PI) {
-                                    newPressed[2] = true;
+                                    newActive[2] = true;
                                 } else {
-                                    newPressed[3] = true;
+                                    newActive[3] = true;
                                 }
                                 if (angle >= Math.PI / 2 && angle <= 3 / 2 * Math.PI) {
-                                    newPressed[1] = true;
+                                    newActive[1] = true;
                                 } else {
-                                    newPressed[0] = true;
+                                    newActive[0] = true;
                                 }
                             }
                         }
 
                         for (let i = 0; i < 4; ++i) {
-                            if (pressed[i] != newPressed[i]) {
-                                buttonChange(codes[i], newPressed[i]);
-                                pressed[i] = newPressed[i];
+                            if (active[i] != newActive[i]) {
+                                actionChange(codes[i], newActive[i]);
+                                active[i] = newActive[i];
                             }
                         }
                     }} />;
-                } break;
-                default: {
-                    console.error("Unknown control tag", c);
-                }
+            };
+            case "gap":
+            case "abs":
+            case "col":
+            case "row": {
+                return createLayout(i, { nested: true });
+            };
+            default: {
+                console.error("Unknown item tag", i);
             }
-            return null;
-        })}
+        }
+        return null;
+    }
+
+    function position(style: any, pos: BoxRem | undefined) {
+        if (typeof pos?.left === "number") {
+            style.left = pos.left + "rem";
+        } else if (typeof pos?.right === "number") {
+            style.right = pos.right + "rem";
+        }
+
+        if (typeof pos?.top === "number") {
+            style.top = pos.top + "rem";
+        } else if (typeof pos?.bottom === "number") {
+            style.bottom = pos.bottom + "rem";
+        }
+
+        style.position = "absolute";
+
+        style.transformOrigin = (typeof pos?.right === "number" ? "right " : "left ") +
+            (typeof pos?.bottom === "number" ? "bottom " : "top ");
+
+        return style;
+    }
+
+    function createLayout(layout: Layout, options?: { nested: boolean }): JSX.Element | null {
+        switch (layout.tag) {
+            case "row": {
+                const style: any = options?.nested ? null : position({
+                    scale: scale + "",
+                    alignItems: layout.align ?? "start",
+                }, layout);
+                return <div class="flex flex-row gap-8" style={style}>
+                    {layout.items.map(createItem)}
+                </div>;
+            }
+            case "col": {
+                const style: any = options?.nested ? null : position({
+                    scale: scale + "",
+                    alignItems: layout.align ?? "start",
+                }, layout);
+                return <div class="flex flex-col gap-8" style={style}>
+                    {layout.items.map(createItem)}
+                </div>;
+            }
+            case "gap": {
+                return <div class="w-12 h-12"></div>;
+            }
+            case "abs": {
+                return <div style={position({
+                    scale: scale + "",
+                }, layout)}>{createItem(layout.item)}</div>;
+            }
+            default:
+                console.error("Unknown layout tag", layout);
+                return null;
+        }
+    }
+
+    return <div ref={layerRef} class="absolute" style={{
+        top: padding.top + "rem",
+        right: padding.right + "rem",
+        bottom: padding.bottom + "rem",
+        left: padding.left + "rem",
+    }}>
+        {layer.layout.map((i) => createLayout(i))}
     </div>;
+}
+
+export function Layers(props: {
+    layers: Layer[],
+    onChange: LayerOnChange,
+}) {
+    const layer = useSelector((state: State) => state.ui.layer);
+    const layersCount = useSelector((state: State) => state.ui.layersCount);
+    const dispatch = useDispatch();
+
+    useEffect(() => {
+        if (layersCount !== props.layers.length) {
+            dispatch(uiSlice.actions.setLayersCount(props.layers.length));
+        }
+    }, [props.layers.length, layersCount, dispatch]);
+
+    return layer >= 0 && layer < props.layers.length ?
+        <LayerComponent layer={props.layers[layer]} onChange={props.onChange} /> :
+        null;
 }

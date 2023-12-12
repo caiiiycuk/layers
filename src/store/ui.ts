@@ -4,11 +4,18 @@ export const uiSlice = createSlice({
     name: "ui",
     initialState: {
         scale: 1,
-        visible: true,
+        layer: 0,
+        layersCount: 0,
     },
     reducers: {
-        setVisible: (state, payload: { payload: boolean }) => {
-            state.visible = payload.payload;
+        setScale: (state, payload: { payload: number }) => {
+            state.scale = payload.payload;
+        },
+        setLayer: (state, payload: { payload: number }) => {
+            state.layer = payload.payload % state.layersCount;
+        },
+        setLayersCount: (state, payload: { payload: number }) => {
+            state.layersCount = payload.payload;
         },
     },
 });

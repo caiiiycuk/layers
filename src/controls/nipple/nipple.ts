@@ -18,8 +18,8 @@ export function createNippleHandler(
     const size = Math.max(width, height);
     let nippleSize: number = 0;
     const center = {
-        x: (left + width) / 2,
-        y: (top + height) / 2,
+        x: left + width / 2,
+        y: top + height / 2,
     };
     let sensorPos = { ...center };
 

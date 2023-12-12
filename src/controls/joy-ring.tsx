@@ -1,16 +1,16 @@
 import { Ref, useEffect, useRef } from "preact/hooks";
+import { createNippleHandler } from "./nipple/nipple";
 import { useSelector } from "react-redux";
 import { State } from "../store";
-import { createNippleHandler } from "./nipple/nipple";
 
 export function JoyRing(props: {
     layerRef: Ref<HTMLDivElement>,
     onChange: (active: boolean, angle: number, distance: number) => void,
 }) {
+    const scale = useSelector((state: State) => state.ui.scale);
     const layerRef = props.layerRef;
     const sensorRef = useRef<HTMLDivElement>(null);
     const nippleRef = useRef<HTMLDivElement>(null);
-    const scale = useSelector((state: State) => state.ui.scale);
 
     useEffect(() => {
         const sensor = sensorRef.current;
@@ -19,10 +19,10 @@ export function JoyRing(props: {
 
         if (sensor !== null && nipple !== null && layer !== null) {
             const handler = createNippleHandler(nipple, sensor, props.onChange);
-
             let pointerId: number | null = null;
             function onPoinerDown(e: PointerEvent) {
-                if (pointerId === null) {
+                if (pointerId === null &&
+                    (e.target === layer || e.target === nipple || e.target === sensor)) {
                     pointerId = e.pointerId;
                     handler.nippleStart(e.clientX, e.clientY);
                 }
@@ -55,10 +55,12 @@ export function JoyRing(props: {
         }
     }, [sensorRef, nippleRef, layerRef, props.onChange]);
 
-    return <div class="w-48 h-48 relative" style={{ scale: scale }}>
+    return <>
         <div ref={sensorRef}
-            class="absolute pointer-events-none rounded-full bg-neutral opacity-20 w-full h-full" />
+            class="w-48 h-48 absolute pointer-events-none rounded-full bg-neutral opacity-20"
+            style={ "scale: " + scale }/>
         <div ref={nippleRef}
-            class="absolute hidden pointer-events-none bg-neutral-content opacity-80 w-1/2 h-1/2 rounded-full" />
-    </div>;
+            class="absolute hidden pointer-events-none bg-neutral-content opacity-80 w-20 h-20 rounded-full"
+            style={ "scale: " + scale } />
+    </>;
 }
