@@ -1,5 +1,5 @@
 import { JSX } from "preact";
-import { useEffect, useRef } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
 import { JoyRing } from "./controls/joy-ring";
 import { Button } from "./controls/button";
 import { useDispatch, useSelector } from "react-redux";
@@ -12,6 +12,7 @@ function LayerComponent(props: {
     onChange: LayerOnChange,
 }) {
     const scale = useSelector((state: State) => state.ui.scale);
+    const dispatch = useDispatch();
     const layerRef = useRef<HTMLDivElement>(null);
     const { layer, onChange } = props;
     const padding = {
@@ -20,19 +21,61 @@ function LayerComponent(props: {
         top: layer.top ?? 0,
         bottom: layer.bottom ?? 0,
     };
-    const actionCounter: { [code: number]: number } = {};
+    const [actionCount, setActionCount] = useState<{ [code: number]: number }>({});
 
-    function actionChange(code: number, _active: boolean) {
-        if (actionCounter[code] === undefined) {
-            actionCounter[code] = 0;
+
+    useEffect(() => {
+        const layer = layerRef?.current;
+        if (layer) {
+            const onPointerDown = (e: PointerEvent) => {
+                dispatch(uiSlice.actions.pointerDown({
+                    id: e.pointerId + "",
+                    x: e.clientX,
+                    y: e.clientY
+                }));
+            };
+
+            const onPointerMove = (e: PointerEvent) => {
+                dispatch(uiSlice.actions.pointerMove({
+                    id: e.pointerId + "",
+                    x: e.clientX,
+                    y: e.clientY,
+                }));
+            };
+
+            const onPointerUp = (e: PointerEvent) => {
+                dispatch(uiSlice.actions.pointerUp(e.pointerId));
+            };
+
+            layer.addEventListener("pointerdown", onPointerDown);
+            layer.addEventListener("pointermove", onPointerMove);
+            layer.addEventListener("pointerup", onPointerUp);
+            layer.addEventListener("pointercancel", onPointerUp);
+            layer.addEventListener("pointerleave", onPointerUp);
+
+            return () => {
+                layer.removeEventListener("pointerdown", onPointerDown);
+                layer.removeEventListener("pointermove", onPointerMove);
+                layer.removeEventListener("pointerup", onPointerUp);
+                layer.removeEventListener("pointercancel", onPointerUp);
+                layer.removeEventListener("pointerleave", onPointerUp);
+            };
         }
 
-        const active = actionCounter[code] > 0;
-        actionCounter[code] += _active ? 1 : -1;
-        const newActive = actionCounter[code] > 0;
+    }, [layerRef])
+
+    function actionChange(code: number, _active: boolean) {
+        if (actionCount[code] === undefined) {
+            actionCount[code] = 0;
+        }
+
+        const active = actionCount[code] > 0;
+        actionCount[code] += _active ? 1 : -1;
+        const newActive = actionCount[code] > 0;
 
         if (active != newActive) {
             onChange.action(code, newActive);
+            setActionCount({...actionCount});
         }
     }
 
@@ -127,7 +170,7 @@ function LayerComponent(props: {
                     scale: scale + "",
                     alignItems: layout.align ?? "start",
                 }, layout);
-                return <div class="flex flex-row gap-8" style={style}>
+                return <div class="flex flex-row" style={style}>
                     {layout.items.map(createItem)}
                 </div>;
             }
@@ -136,7 +179,7 @@ function LayerComponent(props: {
                     scale: scale + "",
                     alignItems: layout.align ?? "start",
                 }, layout);
-                return <div class="flex flex-col gap-8" style={style}>
+                return <div class="flex flex-col" style={style}>
                     {layout.items.map(createItem)}
                 </div>;
             }

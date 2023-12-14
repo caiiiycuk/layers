@@ -78,12 +78,13 @@ const debugOnChange: LayerOnChange = {
 export function Debug() {
     const scale = useSelector((state: State) => state.ui.scale);
     const layer = useSelector((state: State) => state.ui.layer);
+    const pointers = useSelector((state: State) => state.ui.pointers);
     const dispatch = useDispatch();
     return <>
         <input type="range" min={1} max={50} value={scale * 10} step={1}
             onChange={(e) => dispatch(uiSlice.actions.setScale(Number.parseInt(e.currentTarget.value) / 10))}
             class="range" />
-        <p>Layer: {layer} Scale: {scale}</p>
+        <p>Layer: {layer} Scale: {scale} Pointers: { Object.values(pointers).map((p) => <>{p.id}{p.active ? "*" : " "}{Math.round(p.x)}:{Math.round(p.y)}</>) }</p>
         <div class="relative h-full">
             <Layers layers={debugLayers} onChange={debugOnChange} />
         </div>
