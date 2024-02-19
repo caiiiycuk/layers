@@ -1,20 +1,24 @@
-import { render, JSX } from "preact";
+import { render } from "preact";
 import "./index.css";
 import { Provider } from "react-redux";
 import { Layer, LayerOnChange, LayersApi } from "./types";
 import { uiSlice } from "./store/ui";
 import { createStore } from "./store";
-import { Debug } from "./debug";
-import { Layers } from "./Layer";
+import { Layers } from "./layer";
+import { Editor } from "./editor";
 
-function renderLayers(root: HTMLElement, el: JSX.Element): LayersApi {
+(window as any).createLayers = (root: HTMLElement,
+    layers: Layer[],
+    onChange: LayerOnChange) => {
     const store = createStore();
+    store.dispatch(uiSlice.actions.setLayers(layers));
     root.style.userSelect = "none";
     root.style.touchAction = "none";
     render(<Provider store={store}>
-        {el}
+        <Layers onChange={onChange} />
     </Provider>, root);
-    return {
+    const editorRoot: HTMLElement | null = null;
+    const api: LayersApi = {
         setScale: (scale: number) => {
             store.dispatch(uiSlice.actions.setScale(scale));
         },
@@ -30,15 +34,18 @@ function renderLayers(root: HTMLElement, el: JSX.Element): LayersApi {
         setVisible: (visible: boolean) => {
             root.style.display = visible ? "block" : "none";
         },
+        mountEditor: (el: HTMLElement) => {
+            api.unmountEditor();
+            render(<Provider store={store}>
+                <Editor />
+            </Provider>, el);
+        },
+        unmountEditor: () => {
+            if (editorRoot) {
+                render(null, editorRoot);
+            }
+        },
     };
-};
 
-(window as any).createLayers = (root: HTMLElement,
-    layers: Layer[],
-    onChange: LayerOnChange) => {
-    return renderLayers(root, <Layers layers={layers} onChange={onChange} />);
-};
-
-(window as any).createDebugLayer = (root: HTMLElement) => {
-    return renderLayers(root, <Debug />);
+    return api;
 };

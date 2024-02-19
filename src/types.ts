@@ -17,7 +17,7 @@ export type Control = {
 } | {
     tag: "button",
     label?: string,
-    icon?: HTMLElement,
+    icon?: string,
     action: number,
 };
 
@@ -52,4 +52,6 @@ export interface LayersApi {
     getLayer: () => number,
     getVisible: () => void,
     setVisible: (visible: boolean) => void,
+    mountEditor: (el: HTMLElement) => void,
+    unmountEditor: () => void,
 }

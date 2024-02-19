@@ -1,4 +1,5 @@
-import { createSlice } from "@reduxjs/toolkit";
+import { PayloadAction, createSlice } from "@reduxjs/toolkit";
+import { Layer } from "../types";
 
 export interface PointerBaseProps {
     id: string,
@@ -15,39 +16,45 @@ export type Pointers = { [id: string]: Pointer };
 const initialState: {
     scale: number,
     layer: number,
-    layersCount: number,
+    layers: Layer[],
     pointers: Pointers,
+    editor: boolean,
 } = {
     scale: 1,
     layer: 0,
-    layersCount: 0,
+    layers: [],
     pointers: {},
+    editor: true,
 };
 
 export const uiSlice = createSlice({
     name: "ui",
     initialState,
     reducers: {
-        setScale: (state, payload: { payload: number }) => {
+        setScale: (state, payload: PayloadAction<number>) => {
             state.scale = payload.payload;
         },
-        setLayer: (state, payload: { payload: number }) => {
-            state.layer = payload.payload % state.layersCount;
+        setLayer: (state, payload: PayloadAction<number>) => {
+            if (state.layers.length > 0) {
+                state.layer = payload.payload % state.layers.length;
+            }
+            state.pointers = {};
         },
-        setLayersCount: (state, payload: { payload: number }) => {
-            state.layersCount = payload.payload;
+        setLayers: (state, payload: PayloadAction<Layer[]>) => {
+            Object.assign(state, { layers: payload.payload });
+            state.pointers = {};
         },
-        pointerDown: (state, payload: { payload: PointerBaseProps }) => {
+        pointerDown: (state, payload: PayloadAction<PointerBaseProps>) => {
             state.pointers[payload.payload.id] = { active: true, ...payload.payload };
         },
-        pointerMove: (state, payload: { payload: PointerBaseProps }) => {
+        pointerMove: (state, payload: PayloadAction<PointerBaseProps>) => {
             if (state.pointers[payload.payload.id]) {
                 state.pointers[payload.payload.id].x = payload.payload.x;
                 state.pointers[payload.payload.id].y = payload.payload.y;
             }
         },
-        pointerUp: (state, payload: { payload: number }) => {
+        pointerUp: (state, payload: PayloadAction<number>) => {
             delete state.pointers[payload.payload];
-        }
+        },
     },
 });

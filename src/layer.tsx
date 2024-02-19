@@ -31,7 +31,7 @@ function LayerComponent(props: {
                 dispatch(uiSlice.actions.pointerDown({
                     id: e.pointerId + "",
                     x: e.clientX,
-                    y: e.clientY
+                    y: e.clientY,
                 }));
             };
 
@@ -61,8 +61,7 @@ function LayerComponent(props: {
                 layer.removeEventListener("pointerleave", onPointerUp);
             };
         }
-
-    }, [layerRef])
+    }, [layerRef]);
 
     function actionChange(code: number, _active: boolean) {
         if (actionCount[code] === undefined) {
@@ -75,7 +74,7 @@ function LayerComponent(props: {
 
         if (active != newActive) {
             onChange.action(code, newActive);
-            setActionCount({...actionCount});
+            setActionCount({ ...actionCount });
         }
     }
 
@@ -208,20 +207,12 @@ function LayerComponent(props: {
 }
 
 export function Layers(props: {
-    layers: Layer[],
     onChange: LayerOnChange,
 }) {
+    const layers = useSelector((state: State) => state.ui.layers);
     const layer = useSelector((state: State) => state.ui.layer);
-    const layersCount = useSelector((state: State) => state.ui.layersCount);
-    const dispatch = useDispatch();
 
-    useEffect(() => {
-        if (layersCount !== props.layers.length) {
-            dispatch(uiSlice.actions.setLayersCount(props.layers.length));
-        }
-    }, [props.layers.length, layersCount, dispatch]);
-
-    return layer >= 0 && layer < props.layers.length ?
-        <LayerComponent layer={props.layers[layer]} onChange={props.onChange} /> :
+    return layer >= 0 && layer < layers.length ?
+        <LayerComponent layer={layers[layer]} onChange={props.onChange} /> :
         null;
 }

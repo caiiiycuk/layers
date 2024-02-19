@@ -4,7 +4,7 @@ import { State } from "../store";
 
 export function Button(props: {
     label?: string,
-    icon?: HTMLElement,
+    icon?: string,
     onButtonDown: () => void,
     onButtonUp: () => void,
 }) {
@@ -29,8 +29,8 @@ export function Button(props: {
                 const { x, y } = next;
                 if (x >= rect.left && x <= rect.right &&
                     y >= rect.top && y <= rect.bottom) {
-                        newActive = true;
-                        break;
+                    newActive = true;
+                    break;
                 }
             }
         }
@@ -44,18 +44,21 @@ export function Button(props: {
     useEffect(() => {
         const el = btnRef?.current;
         if (icon && el) {
-            icon.style.pointerEvents = "none";
-            icon.style.maxWidth = "2rem";
-            icon.style.maxHeight = "2rem";
-            el.appendChild(icon);
+            const img = document.createElement("img");
+            img.src = icon;
+            img.style.pointerEvents = "none";
+            img.style.maxWidth = "2rem";
+            img.style.maxHeight = "2rem";
+            el.appendChild(img);
             return () => {
-                el.removeChild(icon);
+                el.removeChild(img);
             };
         }
     }, [btnRef?.current, icon]);
 
     return <div class="cursor-pointer p-4" ref={zoneRef}>
-        <div ref={btnRef} class={"btn btn-circle pointer-events-none " + (active ? "bg-primary text-primary-content" : " " )}>{label}</div>
+        <div ref={btnRef} class={"btn btn-circle pointer-events-none " +
+            (active ? "bg-primary text-primary-content" : " " )}>{label}</div>
     </div>;
 }
 
