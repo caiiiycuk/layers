@@ -19,12 +19,14 @@ const initialState: {
     layers: Layer[],
     pointers: Pointers,
     editor: boolean,
+    active: {[id: number]: boolean},
 } = {
     scale: 1,
     layer: 0,
     layers: [],
     pointers: {},
     editor: true,
+    active: [],
 };
 
 export const uiSlice = createSlice({
@@ -55,6 +57,12 @@ export const uiSlice = createSlice({
         },
         pointerUp: (state, payload: PayloadAction<number>) => {
             delete state.pointers[payload.payload];
+        },
+        activate: (state, payload: PayloadAction<number>) => {
+            state.active[payload.payload] = true;
+        },
+        deactivate: (state, payload: PayloadAction<number>) => {
+            state.active[payload.payload] = false;
         },
     },
 });

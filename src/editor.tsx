@@ -3,7 +3,7 @@ import { State } from "./store";
 import { useState } from "preact/hooks";
 import { uiSlice } from "./store/ui";
 import { editorSlice } from "./store/editor";
-import { BoxRem, Control, Layer, Layout } from "./types";
+import { BoxRem, Control, Instance, Layer, Layout } from "./types";
 
 export function Editor() {
     const [tab, setTab] = useState<"layers" | "json">("layers");
@@ -67,9 +67,12 @@ export function LayersView() {
             </thead>
             <tbody>
                 {layers.map((l, i) => {
+                    const selectClick = () => {
+                        dispatch(uiSlice.actions.setLayer(i));
+                    };
                     return <tr class={i === layer ? "bg-base-200" : ""}>
-                        <th>{i}</th>
-                        <td>
+                        <th class="w-24 cursor-pointer" onClick={selectClick}>{i}</th>
+                        <td class="cursor-pointer" onClick={selectClick}>
                             <span class="font-bold inline-block">{l.layout.map((l) => l.tag).join(":")}</span>
                             <br />
                             {boxStr(l)}
@@ -101,6 +104,7 @@ export function LayerView() {
     const layersIndex = useSelector((state: State) => state.editor.layerIndex)!;
     const layers = useSelector((state: State) => state.ui.layers);
     const layoutPath = useSelector((state: State) => state.editor.layoutPath);
+    const selectedUid = useSelector((state: State) => state.editor.selectedUid);
     const layer = layers[layersIndex];
     let layout: (Layout | Control)[] = layer.layout;
     for (const next of layoutPath) {
@@ -132,7 +136,11 @@ export function LayerView() {
     return <div class="flex flex-col gap-2">
         <div class="flex flex-row gap-4 items-center bg-base-300">
             <button class="btn btn-sm btn-ghost self-start"
-                onClick={() => dispatch(editorSlice.actions.setLayerIndex(null))}>&lt;- Back</button>
+                onClick={() => {
+                    dispatch(editorSlice.actions.setLayerIndex(null));
+                    dispatch(uiSlice.actions.deactivate(selectedUid));
+                    dispatch(editorSlice.actions.selectUid(-1));
+                }}>&lt;- Back</button>
             <p>Layer №{layersIndex}</p>
         </div>
         <div class="flex flex-col mx-4 gap-2">
@@ -153,42 +161,53 @@ export function LayerView() {
             </div>
             <div class="flex flex-row items-center bg-base-200 -mx-4 mt-2">
                 {layoutPath.length > 0 && <button class="btn btn-sm btn-ghost self-start"
-                    onClick={() => dispatch(editorSlice.actions.popPath())}>&lt;- Back</button>}
+                    onClick={() => {
+                        dispatch(editorSlice.actions.popPath());
+                        dispatch(uiSlice.actions.deactivate(selectedUid));
+                        dispatch(editorSlice.actions.selectUid(-1));
+                    }}>&lt;- Back</button>}
                 <p class="ml-4">Layout ({layoutPath.length > 0 ? "base:" + layoutPath.join(":") : "base"})</p>
             </div>
             <div class="overflow-x-auto">
                 <table class="table">
                     <thead>
                         <tr>
-                            <th>№</th>
+                            <th class="w-24">№</th>
                             <th>Layout</th>
                             <th>Editor</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {layout.map((l, i) => {
-                            return <tr>
-                                <th class="w-12">{i}</th>
-                                <td class="w-48">
+                        {layout.map((l: (Layout | Control) & Partial<Instance>, i) => {
+                            const selectClick = () => {
+                                dispatch(uiSlice.actions.deactivate(selectedUid));
+                                dispatch(uiSlice.actions.activate(l.uid ?? 0));
+                                dispatch(editorSlice.actions.selectUid(l.uid ?? 0));
+                            };
+                            return <tr class={l.uid === selectedUid ? "bg-base-200" : ""}>
+                                <th class="w-24 cursor-pointer" onClick={selectClick}>{i}</th>
+                                <td class="cursor-pointer" onClick={selectClick}>
                                     <div class="flex flex-row gap-2 items-center">
                                         <div class="flex-grow">
                                             <span class="font-bold">{l.tag}</span><br />{boxStr(l)}
                                         </div>
-                                        <button class="btn btn-xs hover:btn-error"
-                                            onClick={() => deleteOnPath(i)}>Delete</button>
                                     </div>
                                 </td>
                                 <td>
-                                    {
-                                        (() => {
-                                            switch (l.tag) {
-                                                case "row":
-                                                case "col":
-                                                    return <ColRowView item={l} index={i} />;
-                                            }
-                                            return null;
-                                        })()
-                                    }
+                                    <div class="join">
+                                        {
+                                            (() => {
+                                                switch (l.tag) {
+                                                    case "row":
+                                                    case "col":
+                                                        return <ColRowView item={l} index={i} />;
+                                                }
+                                                return null;
+                                            })()
+                                        }
+                                        <button class="btn btn-xs join-item hover:btn-error"
+                                            onClick={() => deleteOnPath(i)}>Delete</button>
+                                    </div>
                                 </td>
                             </tr>;
                         })}
@@ -201,12 +220,12 @@ export function LayerView() {
 
 function ColRowView(props: { item: Layout, index: number }) {
     const dispatch = useDispatch();
-    return <div class="join">
+    return <>
         <button class="btn btn-xs join-item hover:btn-primary"
             onClick={() => {
                 dispatch(editorSlice.actions.pushPath(props.index));
             }}>Open</button>
-    </div>;
+    </>;
 }
 
 function boxStr(box: BoxRem | any) {

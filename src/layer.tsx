@@ -4,7 +4,7 @@ import { JoyRing } from "./controls/joy-ring";
 import { Button } from "./controls/button";
 import { useDispatch, useSelector } from "react-redux";
 import { State } from "./store";
-import { BoxRem, Control, Layer, LayerOnChange, Layout } from "./types";
+import { BoxRem, Control, Instance, Layer, LayerOnChange, Layout } from "./types";
 import { uiSlice } from "./store/ui";
 
 function LayerComponent(props: {
@@ -78,10 +78,11 @@ function LayerComponent(props: {
         }
     }
 
-    function createItem(i: Control | Layout) {
+    function createItem(i: (Control | Layout) & Partial<Instance>) {
         switch (i.tag) {
             case "button": {
                 return <Button
+                    uid={i.uid!}
                     {...i}
                     onButtonDown={() => {
                         actionChange(i.action, true);
@@ -162,14 +163,17 @@ function LayerComponent(props: {
         return style;
     }
 
-    function createLayout(layout: Layout, options?: { nested: boolean }): JSX.Element | null {
+    function createLayout(layout: Layout & Partial<Instance>,
+                          options?: { nested: boolean }): JSX.Element | null {
+        const activeClass =
+            useSelector((state: State) => state.ui.active[layout.uid!]) ? "border-primary border-2 " : "";
         switch (layout.tag) {
             case "row": {
                 const style: any = options?.nested ? null : position({
                     scale: scale + "",
                     alignItems: layout.align ?? "start",
                 }, layout);
-                return <div class="flex flex-row" style={style}>
+                return <div class={activeClass + "flex flex-row"} style={style}>
                     {layout.items.map(createItem)}
                 </div>;
             }
@@ -178,21 +182,18 @@ function LayerComponent(props: {
                     scale: scale + "",
                     alignItems: layout.align ?? "start",
                 }, layout);
-                return <div class="flex flex-col" style={style}>
+                return <div class={activeClass + "flex flex-col"} style={style}>
                     {layout.items.map(createItem)}
                 </div>;
             }
             case "gap": {
-                return <div class="w-12 h-12"></div>;
+                return <div class={activeClass + "w-12 h-12"}></div>;
             }
             case "abs": {
-                return <div style={position({
+                return <div class={activeClass} style={position({
                     scale: scale + "",
                 }, layout)}>{createItem(layout.item)}</div>;
             }
-            default:
-                console.error("Unknown layout tag", layout);
-                return null;
         }
     }
 

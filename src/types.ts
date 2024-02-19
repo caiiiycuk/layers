@@ -1,3 +1,6 @@
+export interface Instance {
+    uid: number,
+}
 
 export interface BoxRem {
     left?: number,

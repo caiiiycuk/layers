@@ -1,18 +1,22 @@
 import { useEffect, useRef, useState } from "preact/hooks";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { State } from "../store";
+import { uiSlice } from "../store/ui";
 
 export function Button(props: {
+    uid: number,
     label?: string,
     icon?: string,
     onButtonDown: () => void,
     onButtonUp: () => void,
 }) {
-    const { label, icon, onButtonDown, onButtonUp } = props;
+    const { label, icon, onButtonDown, onButtonUp, uid } = props;
     const zoneRef = useRef<HTMLDivElement>(null);
     const btnRef = useRef<HTMLDivElement>(null);
     const pointers = useSelector((state: State) => state.ui.pointers);
-    const [active, setActive] = useState<boolean>(false);
+    const [pressed, setPressed] = useState<boolean>(false);
+    const active = useSelector((state: State) => state.ui.active[uid]);
+    const dispatch = useDispatch();
 
     useEffect(() => {
         if (zoneRef.current === null) {
@@ -22,24 +26,25 @@ export function Button(props: {
         const zone = zoneRef.current;
         const values = Object.values(pointers);
 
-        let newActive = false;
+        let newPressed = false;
         if (values.length > 0) {
             const rect = zone.getBoundingClientRect();
             for (const next of values) {
                 const { x, y } = next;
                 if (x >= rect.left && x <= rect.right &&
                     y >= rect.top && y <= rect.bottom) {
-                    newActive = true;
+                    newPressed = true;
                     break;
                 }
             }
         }
 
-        if (active !== newActive) {
-            setActive(newActive);
-            newActive ? onButtonDown() : onButtonUp();
+        if (pressed !== newPressed) {
+            setPressed(newPressed);
+            dispatch(newPressed ? uiSlice.actions.activate(uid) : uiSlice.actions.deactivate(uid));
+            newPressed ? onButtonDown() : onButtonUp();
         }
-    }, [active, zoneRef, pointers, onButtonDown, onButtonUp]);
+    }, [pressed, zoneRef, pointers, onButtonDown, onButtonUp, uid]);
 
     useEffect(() => {
         const el = btnRef?.current;
