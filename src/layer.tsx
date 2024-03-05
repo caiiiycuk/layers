@@ -168,22 +168,14 @@ function LayerComponent(props: {
         const activeClass =
             useSelector((state: State) => state.ui.active[layout.uid!]) ? "border-primary border-2 " : "";
         switch (layout.tag) {
+            case "col":
             case "row": {
                 const style: any = options?.nested ? null : position({
                     scale: scale + "",
                     alignItems: layout.align ?? "start",
                 }, layout);
-                return <div class={activeClass + "flex flex-row"} style={style}>
-                    {layout.items.map(createItem)}
-                </div>;
-            }
-            case "col": {
-                const style: any = options?.nested ? null : position({
-                    scale: scale + "",
-                    alignItems: layout.align ?? "start",
-                }, layout);
-                return <div class={activeClass + "flex flex-col"} style={style}>
-                    {layout.items.map(createItem)}
+                return <div class={activeClass + "flex flex-" + layout.tag} style={style}>
+                    {layout.layout.map(createItem)}
                 </div>;
             }
             case "gap": {
@@ -192,7 +184,7 @@ function LayerComponent(props: {
             case "abs": {
                 return <div class={activeClass} style={position({
                     scale: scale + "",
-                }, layout)}>{createItem(layout.item)}</div>;
+                }, layout)}>{createItem(layout.layout[0])}</div>;
             }
         }
     }

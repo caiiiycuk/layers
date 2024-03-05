@@ -3,7 +3,7 @@ import { State } from "./store";
 import { useState } from "preact/hooks";
 import { uiSlice } from "./store/ui";
 import { editorSlice } from "./store/editor";
-import { BoxRem, Control, Instance, Layer, Layout } from "./types";
+import { BoxRem, Control, Instance, Layer, Layout, Tag, allLayoutTags, allTags, isLayoutTag } from "./types";
 
 export function Editor() {
     const [tab, setTab] = useState<"layers" | "json">("layers");
@@ -56,12 +56,16 @@ export function LayersView() {
     const dispatch = useDispatch();
     const layers = useSelector((state: State) => state.ui.layers);
     const layer = useSelector((state: State) => state.ui.layer);
+    function selectLayer(i: number) {
+        dispatch(uiSlice.actions.setLayer(i));
+        dispatch(editorSlice.actions.setLayerIndex(i));
+    };
     return <div class="overflow-x-auto">
         <table class="table">
             <thead>
                 <tr>
                     <th>№</th>
-                    <th>Layout</th>
+                    <th>Layer Definition</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -80,10 +84,7 @@ export function LayersView() {
                         <td>
                             <div class="join">
                                 <button class="btn btn-xs join-item hover:btn-primary"
-                                    onClick={() => {
-                                        dispatch(uiSlice.actions.setLayer(i));
-                                        dispatch(editorSlice.actions.setLayerIndex(i));
-                                    }}>Open</button>
+                                    onClick={() => selectLayer(i)}>Open</button>
                                 <button class="btn btn-xs join-item hover:btn-error"
                                     onClick={() => {
                                         const newLayers = [...layers];
@@ -94,6 +95,14 @@ export function LayersView() {
                         </td>
                     </tr>;
                 })}
+                <tr>
+                    <th></th>
+                    <td></td>
+                    <td><button class="btn btn-xs" onClick={() => {
+                        dispatch(uiSlice.actions.setLayers([...layers, { layout: [] }]));
+                        selectLayer(layers.length);
+                    }}>Add</button></td>
+                </tr>
             </tbody>
         </table>
     </div>;
@@ -105,10 +114,17 @@ export function LayerView() {
     const layers = useSelector((state: State) => state.ui.layers);
     const layoutPath = useSelector((state: State) => state.editor.layoutPath);
     const selectedUid = useSelector((state: State) => state.editor.selectedUid);
+    const [newTag, setNewTag] = useState<Tag>(allLayoutTags[0]);
     const layer = layers[layersIndex];
-    let layout: (Layout | Control)[] = layer.layout;
-    for (const next of layoutPath) {
-        layout = (layout[next] as any).items;
+    function layoutOnPath(layer: Layer, path: number[]): { tag: Tag | "layer", layout: (Layout | Control)[] } {
+        let tag: Tag | "layer" = "layer";
+        let layout: (Layout | Control)[] = layer.layout;
+        for (const next of path) {
+            const nextLayout = (layout[next] as Layout);
+            tag = nextLayout.tag;
+            layout = nextLayout.layout;
+        }
+        return { tag, layout };
     }
     function updateLayer(layer: Layer) {
         const newLayers = [...layers];
@@ -126,13 +142,30 @@ export function LayerView() {
     }
     function deleteOnPath(index: number) {
         const newLayer = structuredClone(layer);
-        let layout = newLayer.layout;
-        for (const next of layoutPath) {
-            layout = (layout[next] as any).items;
-        }
+        const layout = layoutOnPath(newLayer, layoutPath).layout;
         layout.splice(index, 1);
         updateLayer(newLayer);
     }
+    function createOnPath() {
+        const newLayer = structuredClone(layer);
+        const layout = layoutOnPath(newLayer, layoutPath).layout;
+        switch (newTag) {
+            case "col":
+            case "row":
+            case "abs":
+            case "gap":
+                layout.push({ tag: newTag, layout: [] });
+                break;
+            case "button":
+                layout.push({ tag: newTag, action: 0 });
+                break;
+            case "joy-arrows":
+                layout.push({ tag: newTag, up: 0, down: 0, left: 0, right: 0 });
+                break;
+        }
+        updateLayer(newLayer);
+    }
+    const { tag, layout } = layoutOnPath(layer, layoutPath);
     return <div class="flex flex-col gap-2">
         <div class="flex flex-row gap-4 items-center bg-base-300">
             <button class="btn btn-sm btn-ghost self-start"
@@ -166,7 +199,7 @@ export function LayerView() {
                         dispatch(uiSlice.actions.deactivate(selectedUid));
                         dispatch(editorSlice.actions.selectUid(-1));
                     }}>&lt;- Back</button>}
-                <p class="ml-4">Layout ({layoutPath.length > 0 ? "base:" + layoutPath.join(":") : "base"})</p>
+                <p class="ml-4">Layout ({layoutPath.length > 0 ? "base:" + layoutPath.join(":") : "base"}) ({tag})</p>
             </div>
             <div class="overflow-x-auto">
                 <table class="table">
@@ -178,39 +211,55 @@ export function LayerView() {
                         </tr>
                     </thead>
                     <tbody>
-                        {layout.map((l: (Layout | Control) & Partial<Instance>, i) => {
-                            const selectClick = () => {
-                                dispatch(uiSlice.actions.deactivate(selectedUid));
-                                dispatch(uiSlice.actions.activate(l.uid ?? 0));
-                                dispatch(editorSlice.actions.selectUid(l.uid ?? 0));
-                            };
-                            return <tr class={l.uid === selectedUid ? "bg-base-200" : ""}>
-                                <th class="w-24 cursor-pointer" onClick={selectClick}>{i}</th>
-                                <td class="cursor-pointer" onClick={selectClick}>
-                                    <div class="flex flex-row gap-2 items-center">
-                                        <div class="flex-grow">
-                                            <span class="font-bold">{l.tag}</span><br />{boxStr(l)}
+                        {(tag === "layer" || isLayoutTag(tag)) &&
+                            layout.map((l: (Layout | Control) & Partial<Instance>, i) => {
+                                const selectClick = () => {
+                                    dispatch(uiSlice.actions.deactivate(selectedUid));
+                                    dispatch(uiSlice.actions.activate(l.uid ?? 0));
+                                    dispatch(editorSlice.actions.selectUid(l.uid ?? 0));
+                                };
+                                return <tr class={l.uid === selectedUid ? "bg-base-200" : ""}>
+                                    <th class="w-24 cursor-pointer" onClick={selectClick}>{i}</th>
+                                    <td class="cursor-pointer" onClick={selectClick}>
+                                        <div class="flex flex-row gap-2 items-center">
+                                            <div class="flex-grow">
+                                                <span class="font-bold">{l.tag}</span><br />{boxStr(l)}
+                                            </div>
                                         </div>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="join">
-                                        {
-                                            (() => {
-                                                switch (l.tag) {
-                                                    case "row":
-                                                    case "col":
-                                                        return <ColRowView item={l} index={i} />;
-                                                }
-                                                return null;
-                                            })()
-                                        }
-                                        <button class="btn btn-xs join-item hover:btn-error"
-                                            onClick={() => deleteOnPath(i)}>Delete</button>
-                                    </div>
-                                </td>
-                            </tr>;
-                        })}
+                                    </td>
+                                    <td>
+                                        <div class="join">
+                                            {
+                                                (() => {
+                                                    switch (l.tag) {
+                                                        case "row":
+                                                        case "col":
+                                                            return <ColRowView item={l} index={i} />;
+                                                    }
+                                                    return null;
+                                                })()
+                                            }
+                                            <button class="btn btn-xs join-item hover:btn-error"
+                                                onClick={() => deleteOnPath(i)}>Delete</button>
+                                        </div>
+                                    </td>
+                                </tr>;
+                            })}
+                        {(tag === "layer" || isLayoutTag(tag)) && <tr>
+                            <th></th>
+                            <td>
+                                <select class="select select-xs" value={newTag}
+                                    onChange={(e) => setNewTag(e.currentTarget.value as Tag)}>
+                                    {(tag === "layer" ? allLayoutTags : allTags).map((tag) => {
+                                        return <option value={tag}>{tag}</option>;
+                                    })}
+                                </select>
+                            </td>
+                            <td><button class="btn btn-xs" onClick={() => {
+                                createOnPath();
+                                dispatch(editorSlice.actions.pushPath(layout.length));
+                            }}>Add</button></td>
+                        </tr>}
                     </tbody>
                 </table>
             </div>
@@ -218,7 +267,7 @@ export function LayerView() {
     </div>;
 }
 
-function ColRowView(props: { item: Layout, index: number }) {
+function ColRowView(props: { item: Layout & { tag: "row" | "col" }, index: number }) {
     const dispatch = useDispatch();
     return <>
         <button class="btn btn-xs join-item hover:btn-primary"

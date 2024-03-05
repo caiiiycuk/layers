@@ -18,8 +18,7 @@ import { Editor } from "./editor";
             case "row":
             case "col":
             case "abs": {
-                const items = layout.tag === "abs" ? [layout.item] : layout.items;
-                for (const next of items) {
+                for (const next of layout.layout) {
                     switch (next.tag) {
                         case "row":
                         case "col":

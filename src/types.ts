@@ -28,18 +28,34 @@ export type Align = "start" | "end" | "center";
 
 export type Layout = {
     tag: "row",
-    items: (Control | Layout)[],
+    layout: (Control | Layout)[],
     align?: Align,
 } & BoxRem | {
     tag: "col",
-    items: (Control | Layout)[],
+    layout: (Control | Layout)[],
     align?: Align,
 } & BoxRem | {
     tag: "abs",
-    item: Control,
+    layout: (Control | Layout)[],
 } & BoxRem | {
     tag: "gap",
+    layout: (Control | Layout)[],
 };
+
+export type LayoutTag = Layout["tag"];
+export type ControlTag = Control["tag"];
+export type Tag = LayoutTag | ControlTag;
+export const allLayoutTags: LayoutTag[] = ["row", "col", "abs", "gap"];
+export const allControlTags: ControlTag[] = ["joy-arrows", "button"];
+export const allTags: Tag[] = [...allLayoutTags, ...allControlTags];
+
+export function isLayoutTag(tag: Tag) {
+    return allLayoutTags.indexOf(tag as LayoutTag) >= 0;
+}
+
+export function isControlTag(tag: Tag) {
+    return allControlTags.indexOf(tag as ControlTag) >= 0;
+}
 
 export interface LayerOnChange {
     action: (code: number, active: boolean) => void;
