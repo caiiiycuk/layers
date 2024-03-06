@@ -4,8 +4,9 @@ import { JoyRing } from "./controls/joy-ring";
 import { Button } from "./controls/button";
 import { useDispatch, useSelector } from "react-redux";
 import { State } from "./store";
-import { BoxRem, Control, Instance, Layer, LayerOnChange, Layout } from "./types";
+import { BoxRem, Control, InstanceProps, Layer, LayerOnChange, Layout } from "./types";
 import { uiSlice } from "./store/ui";
+import { EdgeMatrix } from "./controls/edge-matrix";
 
 function LayerComponent(props: {
     layer: Layer,
@@ -21,7 +22,7 @@ function LayerComponent(props: {
         top: layer.top ?? 0,
         bottom: layer.bottom ?? 0,
     };
-    const [actionCount, setActionCount] = useState<{ [code: number]: number }>({});
+    const [actionCount, setActionCount] = useState<{ [code: string]: number }>({});
 
 
     useEffect(() => {
@@ -63,7 +64,7 @@ function LayerComponent(props: {
         }
     }, [layerRef]);
 
-    function actionChange(code: number, _active: boolean) {
+    function actionChange(code: string, _active: boolean) {
         if (actionCount[code] === undefined) {
             actionCount[code] = 0;
         }
@@ -78,24 +79,25 @@ function LayerComponent(props: {
         }
     }
 
-    function createItem(i: (Control | Layout) & Partial<Instance>) {
-        switch (i.tag) {
+    function createComponent(c: (Control | Layout) & Partial<InstanceProps>) {
+        const instanceProps: InstanceProps = {
+            uid: c.uid!,
+            actionChange,
+        };
+        switch (c.tag) {
             case "button": {
                 return <Button
-                    uid={i.uid!}
-                    {...i}
-                    onButtonDown={() => {
-                        actionChange(i.action, true);
-                    }}
-                    onButtonUp={() => {
-                        actionChange(i.action, false);
-                    }} />;
+                    {...instanceProps}
+                    {...c} />;
+            }
+            case "edge-matrix": {
+                return <EdgeMatrix {...c} />;
             }
             case "joy-arrows": {
                 const active: boolean[] = [false, false, false, false];
-                const codes = [i.up, i.down, i.left, i.right];
-                const forwardRange = i.forwardRange ?? 0.2;
-                const backwardRange = i.backwardRange ?? 0.2;
+                const codes = [c.up, c.down, c.left, c.right];
+                const forwardRange = c.forwardRange ?? 0.2;
+                const backwardRange = c.backwardRange ?? 0.2;
                 return <JoyRing
                     layerRef={layerRef}
                     onChange={(joyActive, angle, distance) => {
@@ -132,12 +134,10 @@ function LayerComponent(props: {
             case "gap":
             case "abs":
             case "col":
+            case "stack":
             case "row": {
-                return createLayout(i, { nested: true });
+                return createLayout(c, { nested: true });
             };
-            default: {
-                console.error("Unknown item tag", i);
-            }
         }
         return null;
     }
@@ -163,7 +163,7 @@ function LayerComponent(props: {
         return style;
     }
 
-    function createLayout(layout: Layout & Partial<Instance>,
+    function createLayout(layout: Layout & Partial<InstanceProps>,
                           options?: { nested: boolean }): JSX.Element | null {
         const activeClass =
             useSelector((state: State) => state.ui.active[layout.uid!]) ? "border-primary border-2 " : "";
@@ -175,7 +175,7 @@ function LayerComponent(props: {
                     alignItems: layout.align ?? "start",
                 }, layout);
                 return <div class={activeClass + "flex flex-" + layout.tag} style={style}>
-                    {layout.layout.map(createItem)}
+                    {layout.layout.map(createComponent)}
                 </div>;
             }
             case "gap": {
@@ -184,7 +184,14 @@ function LayerComponent(props: {
             case "abs": {
                 return <div class={activeClass} style={position({
                     scale: scale + "",
-                }, layout)}>{createItem(layout.layout[0])}</div>;
+                }, layout)}>
+                    {layout.layout.map(createComponent)}
+                </div>;
+            }
+            case "stack": {
+                return <div class={activeClass}>
+                    {layout.layout.map(createComponent)}
+                </div>;
             }
         }
     }

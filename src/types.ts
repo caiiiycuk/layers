@@ -1,5 +1,9 @@
-export interface Instance {
+import { ButtonProps } from "./controls/button";
+import { EdgeMatrixProps } from "./controls/edge-matrix";
+
+export interface InstanceProps {
     uid: number,
+    actionChange: (code: string, active: boolean) => void,
 }
 
 export interface BoxRem {
@@ -11,18 +15,13 @@ export interface BoxRem {
 
 export type Control = {
     tag: "joy-arrows",
-    up: number,
-    down: number,
-    left: number,
-    right: number,
+    up: string,
+    down: string,
+    left: string,
+    right: string,
     forwardRange?: number,
     backwardRange?: number,
-} | {
-    tag: "button",
-    label?: string,
-    icon?: string,
-    action: number,
-};
+} | ButtonProps | EdgeMatrixProps;
 
 export type Align = "start" | "end" | "center";
 
@@ -40,25 +39,28 @@ export type Layout = {
 } & BoxRem | {
     tag: "gap",
     layout: (Control | Layout)[],
+} & BoxRem | {
+    tag: "stack",
+    layout: (Control | Layout)[],
 };
 
 export type LayoutTag = Layout["tag"];
 export type ControlTag = Control["tag"];
 export type Tag = LayoutTag | ControlTag;
-export const allLayoutTags: LayoutTag[] = ["row", "col", "abs", "gap"];
-export const allControlTags: ControlTag[] = ["joy-arrows", "button"];
+export const allLayoutTags: LayoutTag[] = ["row", "col", "abs", "gap", "stack"];
+export const allControlTags: ControlTag[] = ["joy-arrows", "button", "edge-matrix"];
 export const allTags: Tag[] = [...allLayoutTags, ...allControlTags];
 
-export function isLayoutTag(tag: Tag) {
+export function isLayoutTag(tag: Tag | string) {
     return allLayoutTags.indexOf(tag as LayoutTag) >= 0;
 }
 
-export function isControlTag(tag: Tag) {
+export function isControlTag(tag: Tag | string) {
     return allControlTags.indexOf(tag as ControlTag) >= 0;
 }
 
 export interface LayerOnChange {
-    action: (code: number, active: boolean) => void;
+    action: (code: string, active: boolean) => void;
 }
 
 export interface Layer extends BoxRem {

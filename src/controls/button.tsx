@@ -2,15 +2,23 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import { useDispatch, useSelector } from "react-redux";
 import { State } from "../store";
 import { uiSlice } from "../store/ui";
+import { InstanceProps } from "../types";
 
-export function Button(props: {
-    uid: number,
+export interface ButtonProps {
+    tag: "button",
     label?: string,
     icon?: string,
-    onButtonDown: () => void,
-    onButtonUp: () => void,
-}) {
-    const { label, icon, onButtonDown, onButtonUp, uid } = props;
+    action: string,
+}
+
+export function Button(props: ButtonProps & InstanceProps) {
+    const { label, icon, actionChange, uid, action } = props;
+    const onButtonDown = () => {
+        actionChange(action, true);
+    };
+    const onButtonUp = () => {
+        actionChange(action, false);
+    };
     const zoneRef = useRef<HTMLDivElement>(null);
     const btnRef = useRef<HTMLDivElement>(null);
     const pointers = useSelector((state: State) => state.ui.pointers);
@@ -63,7 +71,35 @@ export function Button(props: {
 
     return <div class="cursor-pointer p-4" ref={zoneRef}>
         <div ref={btnRef} class={"btn btn-circle pointer-events-none " +
-            (active ? "bg-primary text-primary-content" : " " )}>{label}</div>
+            (active ? "bg-primary text-primary-content" : " ")}>{label}</div>
     </div>;
 }
 
+export function ButtonEditor(props: {
+    control: ButtonProps,
+    onChange: (props: ButtonProps) => void,
+}) {
+    const { control, onChange } = props;
+    return <div class="flex flex-row gap-2 items-center">
+        <div class="flex flex-row gap-2 items-center">
+            Label
+            <input class="input input-bordered w-16 input-sm"
+                value={control.label ?? ""}
+                onChange={(e) => {
+                    const newControl = structuredClone(control);
+                    newControl.label = e.currentTarget.value;
+                    onChange(newControl);
+                }} />
+        </div>
+        <div class="flex flex-row gap-2 items-center">
+            Action
+            <input class="input input-bordered w-16 input-sm"
+                value={control.action}
+                onChange={(e) => {
+                    const newControl = structuredClone(control);
+                    newControl.action = e.currentTarget.value;
+                    onChange(newControl);
+                }} />
+        </div>
+    </div>;
+}

@@ -1,7 +1,7 @@
 import { render } from "preact";
 import "./index.css";
 import { Provider } from "react-redux";
-import { Instance, Layer, LayerOnChange, LayersApi, Layout } from "./types";
+import { InstanceProps, Layer, LayerOnChange, LayersApi, Layout, isControlTag } from "./types";
 import { uiSlice } from "./store/ui";
 import { createStore } from "./store";
 import { Layers } from "./layer";
@@ -12,29 +12,13 @@ import { Editor } from "./editor";
     onChange: LayerOnChange) => {
     const store = createStore();
     let uid = 0;
-    function assingIds(layout: Layout & Partial<Instance>) {
+    function assingIds(layout: Layout & Partial<InstanceProps>) {
         layout.uid = ++uid;
-        switch (layout.tag) {
-            case "row":
-            case "col":
-            case "abs": {
-                for (const next of layout.layout) {
-                    switch (next.tag) {
-                        case "row":
-                        case "col":
-                        case "abs":
-                        case "gap": {
-                            assingIds(next);
-                        } break;
-                        case "joy-arrows":
-                        case "button": {
-                            (next as Partial<Instance>).uid = ++uid;
-                        } break;
-                    }
-                }
-            } break;
-            case "gap": {
-                // do nothing
+        for (const next of layout.layout) {
+            if (isControlTag(next.tag)) {
+                (next as Partial<InstanceProps>).uid = ++uid;
+            } else {
+                assingIds(next as Layout);
             }
         }
     }

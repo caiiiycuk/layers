@@ -3,7 +3,12 @@ import { State } from "./store";
 import { useState } from "preact/hooks";
 import { uiSlice } from "./store/ui";
 import { editorSlice } from "./store/editor";
-import { BoxRem, Control, Instance, Layer, Layout, Tag, allLayoutTags, allTags, isLayoutTag } from "./types";
+import {
+    BoxRem, Control, ControlTag, InstanceProps, Layer,
+    Layout, LayoutTag, Tag, allLayoutTags, allTags, isControlTag, isLayoutTag,
+} from "./types";
+import { EdgeMatrixEditor } from "./controls/edge-matrix";
+import { ButtonEditor } from "./controls/button";
 
 export function Editor() {
     const [tab, setTab] = useState<"layers" | "json">("layers");
@@ -116,15 +121,28 @@ export function LayerView() {
     const selectedUid = useSelector((state: State) => state.editor.selectedUid);
     const [newTag, setNewTag] = useState<Tag>(allLayoutTags[0]);
     const layer = layers[layersIndex];
-    function layoutOnPath(layer: Layer, path: number[]): { tag: Tag | "layer", layout: (Layout | Control)[] } {
+    function layoutOnPath(layer: Layer, path: number[]): {
+        tag: Tag | "layer",
+        layout: (Control | Layout)[] | null,
+        control: Control | null,
+        parent: Layout[] | null,
+    } {
         let tag: Tag | "layer" = "layer";
+        let control: Layout | Control | null = null;
+        let parent: Layout[] | null = null;
         let layout: (Layout | Control)[] = layer.layout;
         for (const next of path) {
-            const nextLayout = (layout[next] as Layout);
-            tag = nextLayout.tag;
-            layout = nextLayout.layout;
+            parent = layout as Layout[];
+            control = parent[next];
+            tag = control.tag;
+            layout = (control as Layout).layout;
         }
-        return { tag, layout };
+        return {
+            tag,
+            layout: layout ?? null,
+            control: !control || (control as Layout).layout !== undefined ? null : control as any,
+            parent,
+        };
     }
     function updateLayer(layer: Layer) {
         const newLayers = [...layers];
@@ -143,29 +161,46 @@ export function LayerView() {
     function deleteOnPath(index: number) {
         const newLayer = structuredClone(layer);
         const layout = layoutOnPath(newLayer, layoutPath).layout;
+        if (layout === null) {
+            throw new Error("Unable to delete sub control in non layout state");
+        }
         layout.splice(index, 1);
         updateLayer(newLayer);
     }
     function createOnPath() {
         const newLayer = structuredClone(layer);
         const layout = layoutOnPath(newLayer, layoutPath).layout;
-        switch (newTag) {
-            case "col":
-            case "row":
-            case "abs":
-            case "gap":
-                layout.push({ tag: newTag, layout: [] });
-                break;
-            case "button":
-                layout.push({ tag: newTag, action: 0 });
-                break;
-            case "joy-arrows":
-                layout.push({ tag: newTag, up: 0, down: 0, left: 0, right: 0 });
-                break;
+        if (layout === null) {
+            throw new Error("Unable to create sub control in non layout state");
+        }
+        if (isLayoutTag(newTag)) {
+            layout.push({ tag: newTag as LayoutTag, layout: [] });
+        } else {
+            const tag = newTag as ControlTag;
+            switch (tag) {
+                case "button":
+                    layout.push({ tag, action: "0" });
+                    break;
+                case "joy-arrows":
+                    layout.push({ tag, up: "0", down: "0", left: "0", right: "0" });
+                    break;
+                case "edge-matrix":
+                    layout.push({ tag, rows: [], size: 2 });
+                    break;
+            }
         }
         updateLayer(newLayer);
     }
-    const { tag, layout } = layoutOnPath(layer, layoutPath);
+    function onControlChange(control: Control) {
+        const newLayer = structuredClone(layer);
+        const parent = layoutOnPath(newLayer, layoutPath).parent;
+        if (parent === null) {
+            throw new Error("Unable to update control in parent layout not found");
+        }
+        parent[layoutPath[layoutPath.length - 1]] = control as any;
+        updateLayer(newLayer);
+    }
+    const { tag, layout, control } = layoutOnPath(layer, layoutPath);
     return <div class="flex flex-col gap-2">
         <div class="flex flex-row gap-4 items-center bg-base-300">
             <button class="btn btn-sm btn-ghost self-start"
@@ -202,17 +237,27 @@ export function LayerView() {
                 <p class="ml-4">Layout ({layoutPath.length > 0 ? "base:" + layoutPath.join(":") : "base"}) ({tag})</p>
             </div>
             <div class="overflow-x-auto">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th class="w-24">№</th>
-                            <th>Layout</th>
-                            <th>Editor</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {(tag === "layer" || isLayoutTag(tag)) &&
-                            layout.map((l: (Layout | Control) & Partial<Instance>, i) => {
+                {isControlTag(tag) && (() => {
+                    switch (tag as ControlTag) {
+                        case "button": return <ButtonEditor
+                            control={control as any}
+                            onChange={onControlChange} />;
+                        case "edge-matrix": return <EdgeMatrixEditor
+                            control={control as any}
+                            onChange={onControlChange} />;
+                    }
+                })()}
+                {(tag === "layer" || isLayoutTag(tag)) &&
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th class="w-24">№</th>
+                                <th>Layout</th>
+                                <th>Editor</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {layout?.map((l: (Layout | Control) & Partial<InstanceProps>, i) => {
                                 const selectClick = () => {
                                     dispatch(uiSlice.actions.deactivate(selectedUid));
                                     dispatch(uiSlice.actions.activate(l.uid ?? 0));
@@ -229,52 +274,37 @@ export function LayerView() {
                                     </td>
                                     <td>
                                         <div class="join">
-                                            {
-                                                (() => {
-                                                    switch (l.tag) {
-                                                        case "row":
-                                                        case "col":
-                                                            return <ColRowView item={l} index={i} />;
-                                                    }
-                                                    return null;
-                                                })()
-                                            }
+                                            <button class="btn btn-xs join-item hover:btn-primary"
+                                                onClick={() => dispatch(editorSlice.actions.pushPath(i))}>
+                                                Open
+                                            </button>
                                             <button class="btn btn-xs join-item hover:btn-error"
                                                 onClick={() => deleteOnPath(i)}>Delete</button>
                                         </div>
                                     </td>
                                 </tr>;
                             })}
-                        {(tag === "layer" || isLayoutTag(tag)) && <tr>
-                            <th></th>
-                            <td>
-                                <select class="select select-xs" value={newTag}
-                                    onChange={(e) => setNewTag(e.currentTarget.value as Tag)}>
-                                    {(tag === "layer" ? allLayoutTags : allTags).map((tag) => {
-                                        return <option value={tag}>{tag}</option>;
-                                    })}
-                                </select>
-                            </td>
-                            <td><button class="btn btn-xs" onClick={() => {
-                                createOnPath();
-                                dispatch(editorSlice.actions.pushPath(layout.length));
-                            }}>Add</button></td>
-                        </tr>}
-                    </tbody>
-                </table>
+                            <tr>
+                                <th></th>
+                                <td>
+                                    <select class="select select-xs" value={newTag}
+                                        onChange={(e) => setNewTag(e.currentTarget.value as Tag)}>
+                                        {(tag === "layer" ? allLayoutTags : allTags).map((tag) => {
+                                            return <option value={tag}>{tag}</option>;
+                                        })}
+                                    </select>
+                                </td>
+                                <td><button class="btn btn-xs" onClick={() => {
+                                    createOnPath();
+                                    dispatch(editorSlice.actions.pushPath(layout?.length ?? 0));
+                                }}>Add</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                }
             </div>
         </div>
     </div>;
-}
-
-function ColRowView(props: { item: Layout & { tag: "row" | "col" }, index: number }) {
-    const dispatch = useDispatch();
-    return <>
-        <button class="btn btn-xs join-item hover:btn-primary"
-            onClick={() => {
-                dispatch(editorSlice.actions.pushPath(props.index));
-            }}>Open</button>
-    </>;
 }
 
 function boxStr(box: BoxRem | any) {
