@@ -1,5 +1,5 @@
 import { PayloadAction, createSlice } from "@reduxjs/toolkit";
-import { Layer } from "../types";
+import { InstanceProps, Layer, Layout, isControlTag } from "../types";
 
 export interface PointerBaseProps {
     id: string,
@@ -19,7 +19,7 @@ const initialState: {
     layers: Layer[],
     pointers: Pointers,
     editor: boolean,
-    active: {[id: number]: boolean},
+    active: { [id: number]: boolean },
 } = {
     scale: 1,
     layer: 0,
@@ -43,6 +43,7 @@ export const uiSlice = createSlice({
             state.pointers = {};
         },
         setLayers: (state, payload: PayloadAction<Layer[]>) => {
+            assignIdsIfNeeded(payload.payload);
             Object.assign(state, { layers: payload.payload });
             state.pointers = {};
         },
@@ -66,3 +67,28 @@ export const uiSlice = createSlice({
         },
     },
 });
+
+
+let uid = 0;
+function assingIds(layout: Layout & Partial<InstanceProps>) {
+    if (!layout.uid) {
+        layout.uid = ++uid;
+    }
+    for (const next of layout.layout) {
+        if (isControlTag(next.tag)) {
+            if (!(next as Partial<InstanceProps>).uid) {
+                (next as Partial<InstanceProps>).uid = ++uid;
+            }
+        } else {
+            assingIds(next as Layout);
+        }
+    }
+}
+
+function assignIdsIfNeeded(layers: Layer[]) {
+    for (const layer of layers) {
+        for (const layout of layer.layout) {
+            assingIds(layout);
+        }
+    }
+}

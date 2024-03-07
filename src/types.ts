@@ -1,9 +1,10 @@
 import { ButtonProps } from "./controls/button";
-import { EdgeMatrixProps } from "./controls/edge-matrix";
+import { ColProps, RowProps } from "./layout/row-col";
 
 export interface InstanceProps {
     uid: number,
     actionChange: (code: string, active: boolean) => void,
+    createComponent: (c: (Control | Layout) & Partial<InstanceProps>) => JSX.Element | null,
 }
 
 export interface BoxRem {
@@ -21,19 +22,16 @@ export type Control = {
     right: string,
     forwardRange?: number,
     backwardRange?: number,
-} | ButtonProps | EdgeMatrixProps;
+} | ButtonProps;
 
-export type Align = "start" | "end" | "center";
+export const alignValues = ["start", "end", "center"] as const;
+export type Align = typeof alignValues[number];
 
-export type Layout = {
-    tag: "row",
+export interface LayoutBase extends BoxRem {
     layout: (Control | Layout)[],
-    align?: Align,
-} & BoxRem | {
-    tag: "col",
-    layout: (Control | Layout)[],
-    align?: Align,
-} & BoxRem | {
+}
+
+export type Layout = RowProps | ColProps | {
     tag: "abs",
     layout: (Control | Layout)[],
 } & BoxRem | {
@@ -48,7 +46,7 @@ export type LayoutTag = Layout["tag"];
 export type ControlTag = Control["tag"];
 export type Tag = LayoutTag | ControlTag;
 export const allLayoutTags: LayoutTag[] = ["row", "col", "abs", "gap", "stack"];
-export const allControlTags: ControlTag[] = ["joy-arrows", "button", "edge-matrix"];
+export const allControlTags: ControlTag[] = ["joy-arrows", "button"];
 export const allTags: Tag[] = [...allLayoutTags, ...allControlTags];
 
 export function isLayoutTag(tag: Tag | string) {

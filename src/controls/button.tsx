@@ -3,16 +3,21 @@ import { useDispatch, useSelector } from "react-redux";
 import { State } from "../store";
 import { uiSlice } from "../store/ui";
 import { InstanceProps } from "../types";
+import { FieldEditor } from "./editor";
+
+const defaultSize = 3;
 
 export interface ButtonProps {
     tag: "button",
     label?: string,
     icon?: string,
+    size?: number,
     action: string,
 }
 
 export function Button(props: ButtonProps & InstanceProps) {
     const { label, icon, actionChange, uid, action } = props;
+    const size = props.size ?? defaultSize;
     const onButtonDown = () => {
         actionChange(action, true);
     };
@@ -60,8 +65,8 @@ export function Button(props: ButtonProps & InstanceProps) {
             const img = document.createElement("img");
             img.src = icon;
             img.style.pointerEvents = "none";
-            img.style.maxWidth = "2rem";
-            img.style.maxHeight = "2rem";
+            img.style.width = size + "rem";
+            img.style.height = size + "rem";
             el.appendChild(img);
             return () => {
                 el.removeChild(img);
@@ -70,8 +75,10 @@ export function Button(props: ButtonProps & InstanceProps) {
     }, [btnRef?.current, icon]);
 
     return <div class="cursor-pointer p-4" ref={zoneRef}>
-        <div ref={btnRef} class={"btn btn-circle pointer-events-none " +
-            (active ? "bg-primary text-primary-content" : " ")}>{label}</div>
+        <div ref={btnRef}
+            style={{ width: size + "rem", height: size + "rem" }}
+            class={"btn btn-circle pointer-events-none " +
+                (active ? "bg-primary text-primary-content" : " ")}>{label}</div>
     </div>;
 }
 
@@ -81,25 +88,8 @@ export function ButtonEditor(props: {
 }) {
     const { control, onChange } = props;
     return <div class="flex flex-row gap-2 items-center">
-        <div class="flex flex-row gap-2 items-center">
-            Label
-            <input class="input input-bordered w-16 input-sm"
-                value={control.label ?? ""}
-                onChange={(e) => {
-                    const newControl = structuredClone(control);
-                    newControl.label = e.currentTarget.value;
-                    onChange(newControl);
-                }} />
-        </div>
-        <div class="flex flex-row gap-2 items-center">
-            Action
-            <input class="input input-bordered w-16 input-sm"
-                value={control.action}
-                onChange={(e) => {
-                    const newControl = structuredClone(control);
-                    newControl.action = e.currentTarget.value;
-                    onChange(newControl);
-                }} />
-        </div>
+        <FieldEditor field="label" props={control} onChange={onChange} default={""} />
+        <FieldEditor field="size" props={control} onChange={onChange} default={defaultSize} />
+        <FieldEditor field="action" props={control} onChange={onChange} />
     </div>;
 }

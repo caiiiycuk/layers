@@ -1,7 +1,7 @@
 import { render } from "preact";
 import "./index.css";
 import { Provider } from "react-redux";
-import { InstanceProps, Layer, LayerOnChange, LayersApi, Layout, isControlTag } from "./types";
+import { Layer, LayerOnChange, LayersApi } from "./types";
 import { uiSlice } from "./store/ui";
 import { createStore } from "./store";
 import { Layers } from "./layer";
@@ -11,22 +11,6 @@ import { Editor } from "./editor";
     layers: Layer[],
     onChange: LayerOnChange) => {
     const store = createStore();
-    let uid = 0;
-    function assingIds(layout: Layout & Partial<InstanceProps>) {
-        layout.uid = ++uid;
-        for (const next of layout.layout) {
-            if (isControlTag(next.tag)) {
-                (next as Partial<InstanceProps>).uid = ++uid;
-            } else {
-                assingIds(next as Layout);
-            }
-        }
-    }
-    for (const layer of layers) {
-        for (const layout of layer.layout) {
-            assingIds(layout);
-        }
-    }
     store.dispatch(uiSlice.actions.setLayers(layers));
     root.style.userSelect = "none";
     root.style.touchAction = "none";

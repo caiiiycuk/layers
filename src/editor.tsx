@@ -7,11 +7,11 @@ import {
     BoxRem, Control, ControlTag, InstanceProps, Layer,
     Layout, LayoutTag, Tag, allLayoutTags, allTags, isControlTag, isLayoutTag,
 } from "./types";
-import { EdgeMatrixEditor } from "./controls/edge-matrix";
 import { ButtonEditor } from "./controls/button";
+import { RowColEditor } from "./layout/row-col";
 
 export function Editor() {
-    const [tab, setTab] = useState<"layers" | "json">("layers");
+    const [tab, setTab] = useState<"layers" | "json" | "options">("layers");
 
     return <div class="w-full h-full flex flex-col">
         <div role="tablist" class="tabs tabs-bordered">
@@ -19,9 +19,12 @@ export function Editor() {
                 onClick={() => setTab("layers")}>Layers</a>
             <a role="tab" class={"tab " + (tab === "json" ? "tab-active" : "")}
                 onClick={() => setTab("json")}>JSON</a>
+            <a role="tab" class={"tab " + (tab === "options" ? "tab-active" : "")}
+                onClick={() => setTab("options")}>Options</a>
         </div>
         {tab === "layers" && <LayersTab></LayersTab>}
         {tab === "json" && <JsonTab></JsonTab>}
+        {tab === "options" && <OptionsTab></OptionsTab>}
     </div >;
 }
 
@@ -45,6 +48,25 @@ export function JsonTab() {
                         dispatch(uiSlice.actions.setLayers(newLayers));
                     }
                 }}>Apply</button>
+        </div>
+    </div>;
+}
+
+export function OptionsTab() {
+    const dispatch = useDispatch();
+    const scale = useSelector((state: State) => state.ui.scale);
+    return <div class="my-4 mx-4 flex flex-col gap-2 flex-grow">
+        <div class="flex flex-row gap-2">
+            <div>Scale</div>
+            <input type="range" min="0" max="200" value={Math.round(scale * 100)}
+                class="range"
+                onChange={(e) => {
+                    const newScale = Number.parseInt(e.currentTarget.value);
+                    if (newScale) {
+                        dispatch(uiSlice.actions.setScale(newScale / 100));
+                    }
+                }} />
+            <div>{scale}x</div>
         </div>
     </div>;
 }
@@ -124,23 +146,23 @@ export function LayerView() {
     function layoutOnPath(layer: Layer, path: number[]): {
         tag: Tag | "layer",
         layout: (Control | Layout)[] | null,
-        control: Control | null,
+        component: Control | Layout | null,
         parent: Layout[] | null,
     } {
         let tag: Tag | "layer" = "layer";
-        let control: Layout | Control | null = null;
+        let component: Layout | Control | null = null;
         let parent: Layout[] | null = null;
         let layout: (Layout | Control)[] = layer.layout;
         for (const next of path) {
             parent = layout as Layout[];
-            control = parent[next];
-            tag = control.tag;
-            layout = (control as Layout).layout;
+            component = parent[next];
+            tag = component.tag;
+            layout = (component as Layout).layout;
         }
         return {
             tag,
             layout: layout ?? null,
-            control: !control || (control as Layout).layout !== undefined ? null : control as any,
+            component: component ?? null,
             parent,
         };
     }
@@ -184,9 +206,6 @@ export function LayerView() {
                 case "joy-arrows":
                     layout.push({ tag, up: "0", down: "0", left: "0", right: "0" });
                     break;
-                case "edge-matrix":
-                    layout.push({ tag, rows: [], size: 2 });
-                    break;
             }
         }
         updateLayer(newLayer);
@@ -197,10 +216,30 @@ export function LayerView() {
         if (parent === null) {
             throw new Error("Unable to update control in parent layout not found");
         }
+        if ((parent[layoutPath[layoutPath.length - 1]] as Partial<InstanceProps>).uid !==
+            (control as Partial<InstanceProps>).uid) {
+            throw new Error("uid of old component does not match uid of new component");
+        }
         parent[layoutPath[layoutPath.length - 1]] = control as any;
         updateLayer(newLayer);
     }
-    const { tag, layout, control } = layoutOnPath(layer, layoutPath);
+    function onLayoutChange(layout: Layout) {
+        const newLayer = structuredClone(layer);
+        const newPath = [...layoutPath];
+        newPath.pop();
+
+        const parent = layoutOnPath(newLayer, newPath).layout;
+        if (parent === null) {
+            throw new Error("Unable to update control in parent layout not found");
+        }
+        if ((parent[layoutPath[layoutPath.length - 1]] as Partial<InstanceProps>).uid !==
+            (layout as Partial<InstanceProps>).uid) {
+            throw new Error("uid of old component does not match uid of new component");
+        }
+        parent[layoutPath[layoutPath.length - 1]] = layout as any;
+        updateLayer(newLayer);
+    }
+    const { tag, layout, component } = layoutOnPath(layer, layoutPath);
     return <div class="flex flex-col gap-2">
         <div class="flex flex-row gap-4 items-center bg-base-300">
             <button class="btn btn-sm btn-ghost self-start"
@@ -240,14 +279,23 @@ export function LayerView() {
                 {isControlTag(tag) && (() => {
                     switch (tag as ControlTag) {
                         case "button": return <ButtonEditor
-                            control={control as any}
-                            onChange={onControlChange} />;
-                        case "edge-matrix": return <EdgeMatrixEditor
-                            control={control as any}
+                            control={component as any}
                             onChange={onControlChange} />;
                     }
                 })()}
-                {(tag === "layer" || isLayoutTag(tag)) &&
+                {(tag === "layer" || isLayoutTag(tag)) && <div class="flex flex-col gap-4">
+                    <div class="font-bold">Properties</div>
+                    <div class="mx-4">
+                        {(() => {
+                            switch (tag as LayoutTag) {
+                                case "row":
+                                case "col":
+                                    return <RowColEditor layout={component as any}
+                                        onChange={onLayoutChange} />;
+                            }
+                        })()}
+                    </div>
+                    <div class="font-bold">Layout Config</div>
                     <table class="table">
                         <thead>
                             <tr>
@@ -275,7 +323,10 @@ export function LayerView() {
                                     <td>
                                         <div class="join">
                                             <button class="btn btn-xs join-item hover:btn-primary"
-                                                onClick={() => dispatch(editorSlice.actions.pushPath(i))}>
+                                                onClick={() => {
+                                                    selectClick();
+                                                    dispatch(editorSlice.actions.pushPath(i));
+                                                }}>
                                                 Open
                                             </button>
                                             <button class="btn btn-xs join-item hover:btn-error"
@@ -301,7 +352,7 @@ export function LayerView() {
                             </tr>
                         </tbody>
                     </table>
-                }
+                </div>}
             </div>
         </div>
     </div>;

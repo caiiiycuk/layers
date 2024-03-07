@@ -4,9 +4,10 @@ import { JoyRing } from "./controls/joy-ring";
 import { Button } from "./controls/button";
 import { useDispatch, useSelector } from "react-redux";
 import { State } from "./store";
-import { BoxRem, Control, InstanceProps, Layer, LayerOnChange, Layout } from "./types";
+import { Control, InstanceProps, Layer, LayerOnChange, Layout } from "./types";
 import { uiSlice } from "./store/ui";
-import { EdgeMatrix } from "./controls/edge-matrix";
+import { boxToPosition } from "./style";
+import { RowCol } from "./layout/row-col";
 
 function LayerComponent(props: {
     layer: Layer,
@@ -83,15 +84,13 @@ function LayerComponent(props: {
         const instanceProps: InstanceProps = {
             uid: c.uid!,
             actionChange,
+            createComponent,
         };
         switch (c.tag) {
             case "button": {
                 return <Button
                     {...instanceProps}
                     {...c} />;
-            }
-            case "edge-matrix": {
-                return <EdgeMatrix {...c} />;
             }
             case "joy-arrows": {
                 const active: boolean[] = [false, false, false, false];
@@ -139,28 +138,6 @@ function LayerComponent(props: {
                 return createLayout(c, { nested: true });
             };
         }
-        return null;
-    }
-
-    function position(style: any, pos: BoxRem | undefined) {
-        if (typeof pos?.left === "number") {
-            style.left = pos.left + "rem";
-        } else if (typeof pos?.right === "number") {
-            style.right = pos.right + "rem";
-        }
-
-        if (typeof pos?.top === "number") {
-            style.top = pos.top + "rem";
-        } else if (typeof pos?.bottom === "number") {
-            style.bottom = pos.bottom + "rem";
-        }
-
-        style.position = "absolute";
-
-        style.transformOrigin = (typeof pos?.right === "number" ? "right " : "left ") +
-            (typeof pos?.bottom === "number" ? "bottom " : "top ");
-
-        return style;
     }
 
     function createLayout(layout: Layout & Partial<InstanceProps>,
@@ -169,20 +146,15 @@ function LayerComponent(props: {
             useSelector((state: State) => state.ui.active[layout.uid!]) ? "border-primary border-2 " : "";
         switch (layout.tag) {
             case "col":
-            case "row": {
-                const style: any = options?.nested ? null : position({
-                    scale: scale + "",
-                    alignItems: layout.align ?? "start",
-                }, layout);
-                return <div class={activeClass + "flex flex-" + layout.tag} style={style}>
-                    {layout.layout.map(createComponent)}
-                </div>;
-            }
+            case "row":
+                return <RowCol {...layout as any}
+                    options={options}
+                    createComponent={createComponent} />;
             case "gap": {
                 return <div class={activeClass + "w-12 h-12"}></div>;
             }
             case "abs": {
-                return <div class={activeClass} style={position({
+                return <div class={activeClass} style={boxToPosition({
                     scale: scale + "",
                 }, layout)}>
                     {layout.layout.map(createComponent)}
