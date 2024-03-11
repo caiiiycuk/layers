@@ -30,20 +30,19 @@
 
         document.addEventListener("DOMContentLoaded", () => {
             const parser = new DOMParser();
-            const api = window.createLayers(document.getElementById("layers"), [{
-                left: 2,
-                right: 2,
-                top: 2,
-                bottom: 2,
-                layout: [{
-                    tag: "stack",
-                    layout: [{
-                        tag: "edge-matrix",
-                        size: 2,
-                        rows: [],
-                    }],
-                }],
-            }, {
+            const api = window.createLayers(document.getElementById("layers"), 
+                layout, 
+                {
+                    action: (code, active) => {
+                        console.log("Action", code, active);
+                    },
+                });
+
+            api.mountEditor(document.getElementById("editor"));
+            window.api = api;
+        });
+
+        const layout = [{
                 left: 2,
                 right: 2,
                 top: 2,
@@ -250,15 +249,7 @@
                         }],
                     }],
                 }],
-            }], {
-                action: (code, active) => {
-                    console.log("Action", code, active);
-                },
-            });
-
-            api.mountEditor(document.getElementById("editor"));
-            window.api = api;
-        });
+            }];
     </script>
 </body>
 

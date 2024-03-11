@@ -24,6 +24,12 @@ export const editorSlice = createSlice({
         popPath(state) {
             state.layoutPath.splice(state.layoutPath.length - 1, 1);
         },
+        resetPath(state, payload: PayloadAction<number[]>) {
+            state.layoutPath.splice(0, state.layoutPath.length);
+            for (const next of payload.payload) {
+                state.layoutPath.push(next);
+            }
+        },
         selectUid(state, payload: PayloadAction<number>) {
             state.selectedUid = payload.payload;
         },

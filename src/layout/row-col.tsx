@@ -1,18 +1,19 @@
 import { useSelector } from "react-redux";
-import { Align, InstanceProps, LayoutBase, alignValues } from "../types";
+import { Align, InstanceProps, LayoutBase } from "../types";
 import { State } from "../store";
 import { boxToPosition } from "../style";
-
-const defaultAlign = "start";
+import { AlignSelect, BoxRemEditor } from "../editors";
 
 export interface RowProps extends LayoutBase {
     tag: "row",
     align?: Align,
+    justify?: Align,
 };
 
 export interface ColProps extends LayoutBase {
     tag: "col",
     align?: Align,
+    justify?: Align,
 };
 
 export function RowCol(props: (RowProps | ColProps) & InstanceProps & {
@@ -20,11 +21,12 @@ export function RowCol(props: (RowProps | ColProps) & InstanceProps & {
 }) {
     const { options } = props;
     const activeClass =
-        useSelector((state: State) => state.ui.active[props.uid!]) ? "border-primary border-2 " : "";
+        useSelector((state: State) => state.ui.active[props.uid!] > 0) ? "border-primary border-2 " : "";
     const scale = useSelector((state: State) => state.ui.scale);
     const style: any = options?.nested ? null : boxToPosition({
         scale: scale + "",
         alignItems: props.align ?? "start",
+        justifyContent: props.justify ?? "start",
     }, props);
     return <div class={activeClass + "flex flex-" + props.tag} style={style} >
         {props.layout.map(props.createComponent)}
@@ -36,18 +38,12 @@ export function RowColEditor(props: {
     onChange: (props: RowProps | ColProps) => void,
 }) {
     const { layout, onChange } = props;
-    return <div class="flex flex-row gap-2 items-center">
-        Align:
-        <select
-            class="select select-sm" value={layout.align ?? defaultAlign}
-            onChange={(e) => {
-                const newLayout = structuredClone(layout);
-                newLayout.align = e.currentTarget.value as Align;
-                onChange(newLayout);
-            }}>
-            {alignValues.map((v) => {
-                return <option value={v}>{v}</option>;
-            })}
-        </select>
+    return <div class="flex flex-row gap-4 items-center">
+        <div>Pos</div>
+        <BoxRemEditor component={layout} onChange={props.onChange}/>
+        <div>Align</div>
+        <AlignSelect component={layout} field={"align"} onChange={onChange} />
+        <div>Justify</div>
+        <AlignSelect component={layout} field={"justify"} onChange={onChange} />
     </div>;
 }

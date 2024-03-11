@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { State } from "../store";
 import { uiSlice } from "../store/ui";
 import { InstanceProps } from "../types";
-import { FieldEditor } from "./editor";
+import { FieldEditor } from "../editors";
 
 const defaultSize = 3;
 
@@ -28,7 +28,7 @@ export function Button(props: ButtonProps & InstanceProps) {
     const btnRef = useRef<HTMLDivElement>(null);
     const pointers = useSelector((state: State) => state.ui.pointers);
     const [pressed, setPressed] = useState<boolean>(false);
-    const active = useSelector((state: State) => state.ui.active[uid]);
+    const active = useSelector((state: State) => state.ui.active[uid] > 0);
     const dispatch = useDispatch();
 
     useEffect(() => {
@@ -87,9 +87,10 @@ export function ButtonEditor(props: {
     onChange: (props: ButtonProps) => void,
 }) {
     const { control, onChange } = props;
-    return <div class="flex flex-row gap-2 items-center">
+    return <div class="flex flex-row flex-wrap gap-2 items-center">
         <FieldEditor field="label" props={control} onChange={onChange} default={""} />
-        <FieldEditor field="size" props={control} onChange={onChange} default={defaultSize} />
+        <FieldEditor field="size" props={control} onChange={onChange} default={defaultSize} type="number" />
         <FieldEditor field="action" props={control} onChange={onChange} />
+        <FieldEditor field="icon" props={control} onChange={onChange} type="url" />
     </div>;
 }

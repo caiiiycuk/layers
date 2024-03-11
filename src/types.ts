@@ -1,4 +1,5 @@
 import { ButtonProps } from "./controls/button";
+import { Anchor } from "./layout/anchor";
 import { ColProps, RowProps } from "./layout/row-col";
 
 export interface InstanceProps {
@@ -31,21 +32,21 @@ export interface LayoutBase extends BoxRem {
     layout: (Control | Layout)[],
 }
 
-export type Layout = RowProps | ColProps | {
-    tag: "abs",
-    layout: (Control | Layout)[],
-} & BoxRem | {
-    tag: "gap",
-    layout: (Control | Layout)[],
-} & BoxRem | {
-    tag: "stack",
-    layout: (Control | Layout)[],
-};
+export type Layout =
+    RowProps |
+    ColProps |
+    Anchor | {
+        tag: "gap",
+        layout: (Control | Layout)[],
+    } & BoxRem | {
+        tag: "stack",
+        layout: (Control | Layout)[],
+    };
 
 export type LayoutTag = Layout["tag"];
 export type ControlTag = Control["tag"];
 export type Tag = LayoutTag | ControlTag;
-export const allLayoutTags: LayoutTag[] = ["row", "col", "abs", "gap", "stack"];
+export const allLayoutTags: LayoutTag[] = ["row", "col", "anchor", "gap", "stack"];
 export const allControlTags: ControlTag[] = ["joy-arrows", "button"];
 export const allTags: Tag[] = [...allLayoutTags, ...allControlTags];
 

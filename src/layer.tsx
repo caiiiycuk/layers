@@ -4,16 +4,15 @@ import { JoyRing } from "./controls/joy-ring";
 import { Button } from "./controls/button";
 import { useDispatch, useSelector } from "react-redux";
 import { State } from "./store";
-import { Control, InstanceProps, Layer, LayerOnChange, Layout } from "./types";
+import { Control, InstanceProps, Layer, LayerOnChange, Layout, isLayoutTag } from "./types";
 import { uiSlice } from "./store/ui";
-import { boxToPosition } from "./style";
 import { RowCol } from "./layout/row-col";
+import { Anchor } from "./layout/anchor";
 
 function LayerComponent(props: {
     layer: Layer,
     onChange: LayerOnChange,
 }) {
-    const scale = useSelector((state: State) => state.ui.scale);
     const dispatch = useDispatch();
     const layerRef = useRef<HTMLDivElement>(null);
     const { layer, onChange } = props;
@@ -86,6 +85,10 @@ function LayerComponent(props: {
             actionChange,
             createComponent,
         };
+        if (isLayoutTag(c.tag)) {
+            return createLayout(c as Layout, { nested: true });
+        }
+        c = c as Control & Partial<InstanceProps>;
         switch (c.tag) {
             case "button": {
                 return <Button
@@ -130,20 +133,14 @@ function LayerComponent(props: {
                         }
                     }} />;
             };
-            case "gap":
-            case "abs":
-            case "col":
-            case "stack":
-            case "row": {
-                return createLayout(c, { nested: true });
-            };
         }
+        throw new Error("Can't create control " + JSON.stringify(c, null, 2));
     }
 
     function createLayout(layout: Layout & Partial<InstanceProps>,
                           options?: { nested: boolean }): JSX.Element | null {
         const activeClass =
-            useSelector((state: State) => state.ui.active[layout.uid!]) ? "border-primary border-2 " : "";
+            useSelector((state: State) => state.ui.active[layout.uid!] > 0) ? "border-primary border-2 " : "";
         switch (layout.tag) {
             case "col":
             case "row":
@@ -153,12 +150,9 @@ function LayerComponent(props: {
             case "gap": {
                 return <div class={activeClass + "w-12 h-12"}></div>;
             }
-            case "abs": {
-                return <div class={activeClass} style={boxToPosition({
-                    scale: scale + "",
-                }, layout)}>
-                    {layout.layout.map(createComponent)}
-                </div>;
+            case "anchor": {
+                return <Anchor {...layout as any}
+                    createComponent={createComponent} />;
             }
             case "stack": {
                 return <div class={activeClass}>

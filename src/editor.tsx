@@ -1,6 +1,6 @@
 import { useDispatch, useSelector } from "react-redux";
 import { State } from "./store";
-import { useState } from "preact/hooks";
+import { useEffect, useState } from "preact/hooks";
 import { uiSlice } from "./store/ui";
 import { editorSlice } from "./store/editor";
 import {
@@ -9,9 +9,54 @@ import {
 } from "./types";
 import { ButtonEditor } from "./controls/button";
 import { RowColEditor } from "./layout/row-col";
+import { BoxRemEditor } from "./editors";
 
 export function Editor() {
     const [tab, setTab] = useState<"layers" | "json" | "options">("layers");
+    const activeHead = useSelector((state: State) => state.ui.activeHead);
+    const selectedUid = useSelector((state: State) => state.editor.selectedUid);
+    const editorLayerIndex = useSelector((state: State) => state.editor.layerIndex);
+    const layerIndex = useSelector((state: State) => state.ui.layer);
+    const layers = useSelector((state: State) => state.ui.layers);
+    const dispatch = useDispatch();
+    useEffect(() => {
+        if (activeHead !== null && selectedUid !== activeHead) {
+            if (editorLayerIndex !== layerIndex) {
+                dispatch(editorSlice.actions.setLayerIndex(layerIndex));
+            }
+            dispatch(uiSlice.actions.deactivate(selectedUid));
+            dispatch(uiSlice.actions.activate(activeHead));
+            dispatch(editorSlice.actions.selectUid(activeHead));
+
+            if (layerIndex >= 0 && layerIndex < layers.length) {
+                const layer = layers[layerIndex];
+                const path: number[] = [];
+
+                function lookup(c: Layout & InstanceProps, uid: number, path: number[]): boolean {
+                    if (c.uid === uid) {
+                        return true;
+                    }
+
+                    if (c.layout) {
+                        for (let i = 0; i < c.layout.length; ++i) {
+                            path.push(i);
+                            if (lookup(c.layout[i] as (Layout & InstanceProps), uid, path)) {
+                                return true;
+                            } else {
+                                path.pop();
+                            }
+                        }
+                    }
+
+                    return false;
+                }
+
+                if (lookup(layer as any, activeHead, path)) {
+                    dispatch(editorSlice.actions.resetPath(path));
+                }
+            }
+        }
+    }, [activeHead, selectedUid, layerIndex, layers, editorLayerIndex]);
 
     return <div class="w-full h-full flex flex-col">
         <div role="tablist" class="tabs tabs-bordered">
@@ -171,15 +216,6 @@ export function LayerView() {
         newLayers[layersIndex] = layer;
         dispatch(uiSlice.actions.setLayers(newLayers));
     }
-    function updateBox(key: "left" | "top" | "right" | "bottom", value: string) {
-        const newLayer = { ...layer };
-        if (value.length > 0) {
-            newLayer[key] = Number.parseInt(value) ?? undefined;
-        } else {
-            delete newLayer[key];
-        }
-        updateLayer(newLayer);
-    }
     function deleteOnPath(index: number) {
         const newLayer = structuredClone(layer);
         const layout = layoutOnPath(newLayer, layoutPath).layout;
@@ -251,20 +287,9 @@ export function LayerView() {
             <p>Layer №{layersIndex}</p>
         </div>
         <div class="flex flex-col mx-4 gap-2">
-            <p>Margins</p>
-            <div class="flex flex-row gap-2 items-baseline mx-4">
-                <p>l:</p>
-                <input type="number" class="input input-bordered input-xs w-16" value={layer.left ?? ""}
-                    onChange={(e) => updateBox("left", e.currentTarget.value)} />
-                <p>r:</p>
-                <input type="number" class="input input-bordered input-xs w-16" value={layer.right ?? ""}
-                    onChange={(e) => updateBox("right", e.currentTarget.value)} />
-                <p>t:</p>
-                <input type="number" class="input input-bordered input-xs w-16" value={layer.top ?? ""}
-                    onChange={(e) => updateBox("top", e.currentTarget.value)} />
-                <p>b:</p>
-                <input type="number" class="input input-bordered input-xs w-16" value={layer.bottom ?? ""}
-                    onChange={(e) => updateBox("bottom", e.currentTarget.value)} />
+            <div class="flex flex-row flex-wrap gap-2 items-baseline">
+                <div>Layer Margins (lrtb):</div>
+                <BoxRemEditor component={layer} onChange={updateLayer} />
             </div>
             <div class="flex flex-row items-center bg-base-200 -mx-4 mt-2">
                 {layoutPath.length > 0 && <button class="btn btn-sm btn-ghost self-start"
@@ -345,10 +370,11 @@ export function LayerView() {
                                         })}
                                     </select>
                                 </td>
-                                <td><button class="btn btn-xs" onClick={() => {
-                                    createOnPath();
-                                    dispatch(editorSlice.actions.pushPath(layout?.length ?? 0));
-                                }}>Add</button></td>
+                                <td><button class="btn btn-xs" disabled={tag === "layer" && !isLayoutTag(newTag)}
+                                    onClick={() => {
+                                        createOnPath();
+                                        dispatch(editorSlice.actions.pushPath(layout?.length ?? 0));
+                                    }}>Add</button></td>
                             </tr>
                         </tbody>
                     </table>
