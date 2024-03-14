@@ -31,10 +31,125 @@
         document.addEventListener("DOMContentLoaded", () => {
             const parser = new DOMParser();
             const api = window.createLayers(document.getElementById("layers"), 
-                layout, 
+[
+  {
+    "layout": [
+      {
+        "tag": "row",
+        "layout": [
+          {
+            "tag": "button",
+            "action": "edge-left-up",
+            "uid": 31
+          }
+        ],
+        "uid": 30
+      },
+      {
+        "tag": "row",
+        "layout": [
+          {
+            "tag": "button",
+            "action": "edge-right-up",
+            "uid": 33
+          }
+        ],
+        "uid": 32,
+        "right": 0
+      },
+      {
+        "tag": "row",
+        "layout": [
+          {
+            "tag": "button",
+            "action": "edge-left-down",
+            "uid": 35
+          }
+        ],
+        "uid": 34,
+        "bottom": 1
+      },
+      {
+        "tag": "row",
+        "layout": [
+          {
+            "tag": "button",
+            "action": "edge-right-down",
+            "uid": 37
+          }
+        ],
+        "uid": 36,
+        "right": 0,
+        "bottom": 0
+      },
+      {
+        "tag": "row",
+        "layout": [
+          {
+            "tag": "button",
+            "action": "edge-up",
+            "uid": 2
+          }
+        ],
+        "uid": 1,
+        "left": 1,
+        "right": 1,
+        "justify": "center"
+      },
+      {
+        "tag": "row",
+        "layout": [
+          {
+            "tag": "button",
+            "action": "edge-down",
+            "uid": 4
+          }
+        ],
+        "uid": 3,
+        "left": 0,
+        "right": 0,
+        "bottom": 1,
+        "justify": "center"
+      },
+      {
+        "tag": "col",
+        "layout": [
+          {
+            "tag": "button",
+            "action": "edge-left",
+            "uid": 6
+          }
+        ],
+        "uid": 5,
+        "top": 0,
+        "bottom": 0,
+        "justify": "center"
+      },
+      {
+        "tag": "col",
+        "layout": [
+          {
+            "tag": "button",
+            "action": "edge-right",
+            "uid": 8
+          }
+        ],
+        "uid": 7,
+        "top": 0,
+        "bottom": 0,
+        "right": 0,
+        "justify": "center"
+      }
+    ]
+  }
+]
+                , 
                 {
                     action: (code, active) => {
                         console.log("Action", code, active);
+                    },
+                    pointer: (x, y, event) => {
+                        console.log("Mouse", x, y, event);
                     },
                 });
 

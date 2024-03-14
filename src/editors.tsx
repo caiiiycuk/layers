@@ -47,13 +47,21 @@ export function BoxRemEditor<T extends BoxRem>(props: {
         props.onChange(newComponent);
     }
     return <div class="join">
-        <input type="number" class="input input-bordered input-xs w-16 join-item" value={props.component.left ?? ""}
+        <input type="number" class="input input-bordered input-xs w-16 join-item"
+            value={props.component.left ?? ""}
+            placeholder="left"
             onChange={(e) => updateBox("left", e.currentTarget.value)} />
-        <input type="number" class="input input-bordered input-xs w-16 join-item" value={props.component.right ?? ""}
+        <input type="number" class="input input-bordered input-xs w-16 join-item"
+            placeholder="right"
+            value={props.component.right ?? ""}
             onChange={(e) => updateBox("right", e.currentTarget.value)} />
-        <input type="number" class="input input-bordered input-xs w-16 join-item" value={props.component.top ?? ""}
+        <input type="number" class="input input-bordered input-xs w-16 join-item"
+            value={props.component.top ?? ""}
+            placeholder="top"
             onChange={(e) => updateBox("top", e.currentTarget.value)} />
-        <input type="number" class="input input-bordered input-xs w-16 join-item" value={props.component.bottom ?? ""}
+        <input type="number" class="input input-bordered input-xs w-16 join-item"
+            placeholder="bottom"
+            value={props.component.bottom ?? ""}
             onChange={(e) => updateBox("bottom", e.currentTarget.value)} />
     </div>;
 }

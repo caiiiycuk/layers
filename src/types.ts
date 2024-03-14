@@ -2,6 +2,8 @@ import { ButtonProps } from "./controls/button";
 import { Anchor } from "./layout/anchor";
 import { ColProps, RowProps } from "./layout/row-col";
 
+export const pointerZoneClass = "__layers_pointer_zone";
+
 export interface InstanceProps {
     uid: number,
     actionChange: (code: string, active: boolean) => void,
@@ -60,6 +62,7 @@ export function isControlTag(tag: Tag | string) {
 
 export interface LayerOnChange {
     action: (code: string, active: boolean) => void;
+    pointer: (x: number, y: number, event: "down" | "up" | "move") => void,
 }
 
 export interface Layer extends BoxRem {

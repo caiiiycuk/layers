@@ -1,7 +1,7 @@
 import { useDispatch, useSelector } from "react-redux";
 import { State } from "./store";
 import { useEffect, useState } from "preact/hooks";
-import { uiSlice } from "./store/ui";
+import { lastUid, uiSlice } from "./store/ui";
 import { editorSlice } from "./store/editor";
 import {
     BoxRem, Control, ControlTag, InstanceProps, Layer,
@@ -93,6 +93,10 @@ export function JsonTab() {
                         dispatch(uiSlice.actions.setLayers(newLayers));
                     }
                 }}>Apply</button>
+            <button class="btn btn-sm join-item btn-success"
+                onClick={() => {
+                    navigator.clipboard.writeText(json);
+                }}>Copy</button>
         </div>
     </div>;
 }
@@ -186,7 +190,6 @@ export function LayerView() {
     const layers = useSelector((state: State) => state.ui.layers);
     const layoutPath = useSelector((state: State) => state.editor.layoutPath);
     const selectedUid = useSelector((state: State) => state.editor.selectedUid);
-    const [newTag, setNewTag] = useState<Tag>(allLayoutTags[0]);
     const layer = layers[layersIndex];
     function layoutOnPath(layer: Layer, path: number[]): {
         tag: Tag | "layer",
@@ -225,7 +228,7 @@ export function LayerView() {
         layout.splice(index, 1);
         updateLayer(newLayer);
     }
-    function createOnPath() {
+    function createOnPath(newTag: string) {
         const newLayer = structuredClone(layer);
         const layout = layoutOnPath(newLayer, layoutPath).layout;
         if (layout === null) {
@@ -288,7 +291,7 @@ export function LayerView() {
         </div>
         <div class="flex flex-col mx-4 gap-2">
             <div class="flex flex-row flex-wrap gap-2 items-baseline">
-                <div>Layer Margins (lrtb):</div>
+                <div>Margins:</div>
                 <BoxRemEditor component={layer} onChange={updateLayer} />
             </div>
             <div class="flex flex-row items-center bg-base-200 -mx-4 mt-2">
@@ -361,20 +364,24 @@ export function LayerView() {
                                 </tr>;
                             })}
                             <tr>
-                                <th></th>
-                                <td>
-                                    <select class="select select-xs" value={newTag}
-                                        onChange={(e) => setNewTag(e.currentTarget.value as Tag)}>
+                                <th>New</th>
+                                <td colSpan={2}>
+                                    <div class="join flex-wrap items-center">
                                         {(tag === "layer" ? allLayoutTags : allTags).map((tag) => {
-                                            return <option value={tag}>{tag}</option>;
+                                            return <div class="btn join-item btn-xs"
+                                                onClick={() => {
+                                                    createOnPath(tag);
+                                                    const uid = lastUid();
+                                                    dispatch(uiSlice.actions.deactivate(selectedUid));
+                                                    dispatch(uiSlice.actions.activate(uid));
+                                                    dispatch(editorSlice.actions.selectUid(uid));
+                                                    dispatch(editorSlice.actions.pushPath(layout?.length ?? 0));
+                                                }}>
+                                                {tag[0].toUpperCase() + tag.substring(1)}
+                                            </div>;
                                         })}
-                                    </select>
+                                    </div>
                                 </td>
-                                <td><button class="btn btn-xs" disabled={tag === "layer" && !isLayoutTag(newTag)}
-                                    onClick={() => {
-                                        createOnPath();
-                                        dispatch(editorSlice.actions.pushPath(layout?.length ?? 0));
-                                    }}>Add</button></td>
                             </tr>
                         </tbody>
                     </table>

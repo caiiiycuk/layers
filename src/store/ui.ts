@@ -103,3 +103,7 @@ function assignIdsIfNeeded(layers: Layer[]) {
         }
     }
 }
+
+export function lastUid() {
+    return uid;
+}

@@ -4,10 +4,15 @@ import { JoyRing } from "./controls/joy-ring";
 import { Button } from "./controls/button";
 import { useDispatch, useSelector } from "react-redux";
 import { State } from "./store";
-import { Control, InstanceProps, Layer, LayerOnChange, Layout, isLayoutTag } from "./types";
+import { Control, InstanceProps, Layer, LayerOnChange, Layout, isLayoutTag, pointerZoneClass } from "./types";
 import { uiSlice } from "./store/ui";
 import { RowCol } from "./layout/row-col";
 import { Anchor } from "./layout/anchor";
+
+interface BoundsInfo {
+    rect: DOMRect,
+    visible: DOMRect[],
+};
 
 function LayerComponent(props: {
     layer: Layer,
@@ -24,16 +29,26 @@ function LayerComponent(props: {
     };
     const [actionCount, setActionCount] = useState<{ [code: string]: number }>({});
 
-
     useEffect(() => {
         const layer = layerRef?.current;
         if (layer) {
+            const boundsInfo: BoundsInfo = {
+                rect: layer.getBoundingClientRect(),
+                visible: [],
+            };
+
+            let isPointerDown = false;
             const onPointerDown = (e: PointerEvent) => {
                 dispatch(uiSlice.actions.pointerDown({
                     id: e.pointerId + "",
                     x: e.clientX,
                     y: e.clientY,
                 }));
+
+                if (!filterPointerEvent(e, boundsInfo) && !isPointerDown) {
+                    isPointerDown = true;
+                    onChange.pointer(relX(e, boundsInfo), relY(e, boundsInfo), "down");
+                }
             };
 
             const onPointerMove = (e: PointerEvent) => {
@@ -42,10 +57,19 @@ function LayerComponent(props: {
                     x: e.clientX,
                     y: e.clientY,
                 }));
+
+                if (!filterPointerEvent(e, boundsInfo)) {
+                    onChange.pointer(relX(e, boundsInfo), relY(e, boundsInfo), "move");
+                }
             };
 
             const onPointerUp = (e: PointerEvent) => {
                 dispatch(uiSlice.actions.pointerUp(e.pointerId));
+
+                if (isPointerDown) {
+                    isPointerDown = false;
+                    onChange.pointer(relX(e, boundsInfo), relY(e, boundsInfo), "up");
+                }
             };
 
             layer.addEventListener("pointerdown", onPointerDown);
@@ -54,7 +78,16 @@ function LayerComponent(props: {
             layer.addEventListener("pointercancel", onPointerUp);
             layer.addEventListener("pointerleave", onPointerUp);
 
+            const sizeObserver = new ResizeObserver(() => {
+                boundsInfo.rect = layer.getBoundingClientRect();
+                boundsInfo.visible = [];
+                searchVisibleRects(layer, boundsInfo);
+            });
+
+            sizeObserver.observe(layer);
+
             return () => {
+                sizeObserver.unobserve(layer);
                 layer.removeEventListener("pointerdown", onPointerDown);
                 layer.removeEventListener("pointermove", onPointerMove);
                 layer.removeEventListener("pointerup", onPointerUp);
@@ -181,4 +214,33 @@ export function Layers(props: {
     return layer >= 0 && layer < layers.length ?
         <LayerComponent layer={layers[layer]} onChange={props.onChange} /> :
         null;
+}
+
+function searchVisibleRects(el: Element, boundsInfo: BoundsInfo) {
+    if (el.classList.contains(pointerZoneClass)) {
+        boundsInfo.visible.push(el.getBoundingClientRect());
+    }
+
+    for (const next of el.children) {
+        searchVisibleRects(next, boundsInfo);
+    }
+}
+
+function filterPointerEvent(e: PointerEvent, boundsInfo: BoundsInfo) {
+    for (const next of boundsInfo.visible) {
+        if (e.clientX >= next.left && e.clientY >= next.top &&
+            e.clientX <= next.right && e.clientY <= next.bottom) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function relX(e: PointerEvent, boundsInfo: BoundsInfo) {
+    return (e.clientX - boundsInfo.rect.left) / boundsInfo.rect.width;
+}
+
+function relY(e: PointerEvent, boundsInfo: BoundsInfo) {
+    return (e.clientY - boundsInfo.rect.top) / boundsInfo.rect.height;
 }

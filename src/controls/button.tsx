@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import { useDispatch, useSelector } from "react-redux";
 import { State } from "../store";
 import { uiSlice } from "../store/ui";
-import { InstanceProps } from "../types";
+import { InstanceProps, pointerZoneClass } from "../types";
 import { FieldEditor } from "../editors";
 
 const defaultSize = 3;
@@ -74,7 +74,7 @@ export function Button(props: ButtonProps & InstanceProps) {
         }
     }, [btnRef?.current, icon]);
 
-    return <div class="cursor-pointer p-4" ref={zoneRef}>
+    return <div class={"cursor-pointer p-4 " + pointerZoneClass} ref={zoneRef}>
         <div ref={btnRef}
             style={{ width: size + "rem", height: size + "rem" }}
             class={"btn btn-circle pointer-events-none " +
