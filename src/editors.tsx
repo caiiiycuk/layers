@@ -1,6 +1,5 @@
+import { defaultAlign } from "./defaults";
 import { BoxRem, alignValues } from "./types";
-
-const defaultAlign = "start";
 
 export function FieldEditor(props: {
     field: string,

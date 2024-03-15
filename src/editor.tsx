@@ -10,6 +10,7 @@ import {
 import { ButtonEditor } from "./controls/button";
 import { RowColEditor } from "./layout/row-col";
 import { BoxRemEditor } from "./editors";
+import { SensorEditor } from "./layout/sensor";
 
 export function Editor() {
     const [tab, setTab] = useState<"layers" | "json" | "options">("layers");
@@ -24,8 +25,6 @@ export function Editor() {
             if (editorLayerIndex !== layerIndex) {
                 dispatch(editorSlice.actions.setLayerIndex(layerIndex));
             }
-            dispatch(uiSlice.actions.deactivate(selectedUid));
-            dispatch(uiSlice.actions.activate(activeHead));
             dispatch(editorSlice.actions.selectUid(activeHead));
 
             if (layerIndex >= 0 && layerIndex < layers.length) {
@@ -57,6 +56,13 @@ export function Editor() {
             }
         }
     }, [activeHead, selectedUid, layerIndex, layers, editorLayerIndex]);
+
+    useEffect(() => {
+        return () => {
+            dispatch(editorSlice.actions.resetPath([]));
+            dispatch(editorSlice.actions.selectUid(-1));
+        };
+    }, []);
 
     return <div class="w-full h-full flex flex-col">
         <div role="tablist" class="tabs tabs-bordered">
@@ -284,7 +290,6 @@ export function LayerView() {
             <button class="btn btn-sm btn-ghost self-start"
                 onClick={() => {
                     dispatch(editorSlice.actions.setLayerIndex(null));
-                    dispatch(uiSlice.actions.deactivate(selectedUid));
                     dispatch(editorSlice.actions.selectUid(-1));
                 }}>&lt;- Back</button>
             <p>Layer №{layersIndex}</p>
@@ -298,7 +303,6 @@ export function LayerView() {
                 {layoutPath.length > 0 && <button class="btn btn-sm btn-ghost self-start"
                     onClick={() => {
                         dispatch(editorSlice.actions.popPath());
-                        dispatch(uiSlice.actions.deactivate(selectedUid));
                         dispatch(editorSlice.actions.selectUid(-1));
                     }}>&lt;- Back</button>}
                 <p class="ml-4">Layout ({layoutPath.length > 0 ? "base:" + layoutPath.join(":") : "base"}) ({tag})</p>
@@ -320,6 +324,9 @@ export function LayerView() {
                                 case "col":
                                     return <RowColEditor layout={component as any}
                                         onChange={onLayoutChange} />;
+                                case "sensor":
+                                    return <SensorEditor layout={component as any}
+                                        onChange={onLayoutChange} />;
                             }
                         })()}
                     </div>
@@ -335,8 +342,6 @@ export function LayerView() {
                         <tbody>
                             {layout?.map((l: (Layout | Control) & Partial<InstanceProps>, i) => {
                                 const selectClick = () => {
-                                    dispatch(uiSlice.actions.deactivate(selectedUid));
-                                    dispatch(uiSlice.actions.activate(l.uid ?? 0));
                                     dispatch(editorSlice.actions.selectUid(l.uid ?? 0));
                                 };
                                 return <tr class={l.uid === selectedUid ? "bg-base-200" : ""}>
@@ -372,8 +377,6 @@ export function LayerView() {
                                                 onClick={() => {
                                                     createOnPath(tag);
                                                     const uid = lastUid();
-                                                    dispatch(uiSlice.actions.deactivate(selectedUid));
-                                                    dispatch(uiSlice.actions.activate(uid));
                                                     dispatch(editorSlice.actions.selectUid(uid));
                                                     dispatch(editorSlice.actions.pushPath(layout?.length ?? 0));
                                                 }}>

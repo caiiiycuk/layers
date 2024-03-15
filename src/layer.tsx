@@ -1,6 +1,5 @@
 import { JSX } from "preact";
-import { useEffect, useRef, useState } from "preact/hooks";
-import { JoyRing } from "./controls/joy-ring";
+import { useEffect, useRef } from "preact/hooks";
 import { Button } from "./controls/button";
 import { useDispatch, useSelector } from "react-redux";
 import { State } from "./store";
@@ -8,6 +7,8 @@ import { Control, InstanceProps, Layer, LayerOnChange, Layout, isLayoutTag, poin
 import { uiSlice } from "./store/ui";
 import { RowCol } from "./layout/row-col";
 import { Anchor } from "./layout/anchor";
+import { Sensor } from "./layout/sensor";
+import { isActive } from "./style";
 
 interface BoundsInfo {
     rect: DOMRect,
@@ -27,7 +28,6 @@ function LayerComponent(props: {
         top: layer.top ?? 0,
         bottom: layer.bottom ?? 0,
     };
-    const [actionCount, setActionCount] = useState<{ [code: string]: number }>({});
 
     useEffect(() => {
         const layer = layerRef?.current;
@@ -97,25 +97,9 @@ function LayerComponent(props: {
         }
     }, [layerRef]);
 
-    function actionChange(code: string, _active: boolean) {
-        if (actionCount[code] === undefined) {
-            actionCount[code] = 0;
-        }
-
-        const active = actionCount[code] > 0;
-        actionCount[code] += _active ? 1 : -1;
-        const newActive = actionCount[code] > 0;
-
-        if (active != newActive) {
-            onChange.action(code, newActive);
-            setActionCount({ ...actionCount });
-        }
-    }
-
     function createComponent(c: (Control | Layout) & Partial<InstanceProps>) {
         const instanceProps: InstanceProps = {
             uid: c.uid!,
-            actionChange,
             createComponent,
         };
         if (isLayoutTag(c.tag)) {
@@ -128,44 +112,6 @@ function LayerComponent(props: {
                     {...instanceProps}
                     {...c} />;
             }
-            case "joy-arrows": {
-                const active: boolean[] = [false, false, false, false];
-                const codes = [c.up, c.down, c.left, c.right];
-                const forwardRange = c.forwardRange ?? 0.2;
-                const backwardRange = c.backwardRange ?? 0.2;
-                return <JoyRing
-                    layerRef={layerRef}
-                    onChange={(joyActive, angle, distance) => {
-                        const newActive = [false, false, false, false];
-                        if (joyActive && distance >= 0.25) {
-                            if (angle >= 0 && angle <= forwardRange ||
-                                angle >= Math.PI * 2 - forwardRange && angle <= Math.PI * 2) {
-                                newActive[0] = true;
-                            } else if (angle >= Math.PI - backwardRange &&
-                                angle <= Math.PI + backwardRange) {
-                                newActive[1] = true;
-                            } else {
-                                if (angle >= 0 && angle <= Math.PI) {
-                                    newActive[2] = true;
-                                } else {
-                                    newActive[3] = true;
-                                }
-                                if (angle >= Math.PI / 2 && angle <= 3 / 2 * Math.PI) {
-                                    newActive[1] = true;
-                                } else {
-                                    newActive[0] = true;
-                                }
-                            }
-                        }
-
-                        for (let i = 0; i < 4; ++i) {
-                            if (active[i] != newActive[i]) {
-                                actionChange(codes[i], newActive[i]);
-                                active[i] = newActive[i];
-                            }
-                        }
-                    }} />;
-            };
         }
         throw new Error("Can't create control " + JSON.stringify(c, null, 2));
     }
@@ -173,7 +119,7 @@ function LayerComponent(props: {
     function createLayout(layout: Layout & Partial<InstanceProps>,
                           options?: { nested: boolean }): JSX.Element | null {
         const activeClass =
-            useSelector((state: State) => state.ui.active[layout.uid!] > 0) ? "border-primary border-2 " : "";
+            useSelector((state: State) => isActive(state, layout.uid)) ? "border-primary border-2 " : "";
         switch (layout.tag) {
             case "col":
             case "row":
@@ -191,6 +137,10 @@ function LayerComponent(props: {
                 return <div class={activeClass}>
                     {layout.layout.map(createComponent)}
                 </div>;
+            }
+            case "sensor": {
+                return <Sensor {...layout as any}
+                    createComponent={createComponent} />;
             }
         }
     }

@@ -1,12 +1,12 @@
 import { ButtonProps } from "./controls/button";
-import { Anchor } from "./layout/anchor";
+import { AnchorProps } from "./layout/anchor";
 import { ColProps, RowProps } from "./layout/row-col";
+import { SensorProps } from "./layout/sensor";
 
 export const pointerZoneClass = "__layers_pointer_zone";
 
 export interface InstanceProps {
     uid: number,
-    actionChange: (code: string, active: boolean) => void,
     createComponent: (c: (Control | Layout) & Partial<InstanceProps>) => JSX.Element | null,
 }
 
@@ -15,6 +15,10 @@ export interface BoxRem {
     right?: number,
     top?: number,
     bottom?: number,
+}
+
+export interface ControlBase {
+    action: string | [],
 }
 
 export type Control = {
@@ -37,7 +41,8 @@ export interface LayoutBase extends BoxRem {
 export type Layout =
     RowProps |
     ColProps |
-    Anchor | {
+    AnchorProps |
+    SensorProps | {
         tag: "gap",
         layout: (Control | Layout)[],
     } & BoxRem | {
@@ -48,7 +53,7 @@ export type Layout =
 export type LayoutTag = Layout["tag"];
 export type ControlTag = Control["tag"];
 export type Tag = LayoutTag | ControlTag;
-export const allLayoutTags: LayoutTag[] = ["row", "col", "anchor", "gap", "stack"];
+export const allLayoutTags: LayoutTag[] = ["row", "col", "anchor", "gap", "stack", "sensor"];
 export const allControlTags: ControlTag[] = ["joy-arrows", "button"];
 export const allTags: Tag[] = [...allLayoutTags, ...allControlTags];
 

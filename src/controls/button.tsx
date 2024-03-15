@@ -2,33 +2,27 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import { useDispatch, useSelector } from "react-redux";
 import { State } from "../store";
 import { uiSlice } from "../store/ui";
-import { InstanceProps, pointerZoneClass } from "../types";
+import { ControlBase, InstanceProps, pointerZoneClass } from "../types";
 import { FieldEditor } from "../editors";
+import { defaultSize } from "../defaults";
+import { isActive } from "../style";
 
-const defaultSize = 3;
-
-export interface ButtonProps {
+export interface ButtonProps extends ControlBase {
     tag: "button",
     label?: string,
     icon?: string,
     size?: number,
-    action: string,
 }
 
 export function Button(props: ButtonProps & InstanceProps) {
-    const { label, icon, actionChange, uid, action } = props;
+    const { label, icon, uid } = props;
     const size = props.size ?? defaultSize;
-    const onButtonDown = () => {
-        actionChange(action, true);
-    };
-    const onButtonUp = () => {
-        actionChange(action, false);
-    };
+    const innerSize = Math.max(size - 1, 1);
     const zoneRef = useRef<HTMLDivElement>(null);
     const btnRef = useRef<HTMLDivElement>(null);
     const pointers = useSelector((state: State) => state.ui.pointers);
-    const [pressed, setPressed] = useState<boolean>(false);
-    const active = useSelector((state: State) => state.ui.active[uid] > 0);
+    const active = useSelector((state: State) => isActive(state, uid));
+    const [myActive, setMyAcitve] = useState<boolean>(false);
     const dispatch = useDispatch();
 
     useEffect(() => {
@@ -39,25 +33,24 @@ export function Button(props: ButtonProps & InstanceProps) {
         const zone = zoneRef.current;
         const values = Object.values(pointers);
 
-        let newPressed = false;
+        let newActive = false;
         if (values.length > 0) {
             const rect = zone.getBoundingClientRect();
             for (const next of values) {
                 const { x, y } = next;
                 if (x >= rect.left && x <= rect.right &&
                     y >= rect.top && y <= rect.bottom) {
-                    newPressed = true;
+                    newActive = true;
                     break;
                 }
             }
         }
 
-        if (pressed !== newPressed) {
-            setPressed(newPressed);
-            dispatch(newPressed ? uiSlice.actions.activate(uid) : uiSlice.actions.deactivate(uid));
-            newPressed ? onButtonDown() : onButtonUp();
+        if (myActive !== newActive) {
+            dispatch(newActive ? uiSlice.actions.activate(uid) : uiSlice.actions.deactivate(uid));
+            setMyAcitve(newActive);
         }
-    }, [pressed, zoneRef, pointers, onButtonDown, onButtonUp, uid]);
+    }, [zoneRef, pointers, myActive, uid]);
 
     useEffect(() => {
         const el = btnRef?.current;
@@ -74,9 +67,17 @@ export function Button(props: ButtonProps & InstanceProps) {
         }
     }, [btnRef?.current, icon]);
 
-    return <div class={"cursor-pointer p-4 " + pointerZoneClass} ref={zoneRef}>
+    return <div
+        class={"cursor-pointer relative " + pointerZoneClass}
+        style={{ width: size + "rem", height: size + "rem" }} ref={zoneRef}>
         <div ref={btnRef}
-            style={{ width: size + "rem", height: size + "rem" }}
+            style={{
+                position: "absolute",
+                left: ((size - innerSize) / 2) + "rem",
+                top: ((size - innerSize) / 2) + "rem",
+                width: innerSize + "rem",
+                height: innerSize + "rem",
+            }}
             class={"btn btn-circle pointer-events-none " +
                 (active ? "bg-primary text-primary-content" : " ")}>{label}</div>
     </div>;

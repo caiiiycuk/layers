@@ -1,7 +1,7 @@
 import { useSelector } from "react-redux";
 import { Align, InstanceProps, LayoutBase } from "../types";
 import { State } from "../store";
-import { boxToPosition } from "../style";
+import { boxToPosition, isActive } from "../style";
 import { AlignSelect, BoxRemEditor } from "../editors";
 
 export interface RowProps extends LayoutBase {
@@ -21,7 +21,7 @@ export function RowCol(props: (RowProps | ColProps) & InstanceProps & {
 }) {
     const { options } = props;
     const activeClass =
-        useSelector((state: State) => state.ui.active[props.uid!] > 0) ? "border-primary border-2 " : "";
+        useSelector((state: State) => isActive(state, props.uid)) ? "border-primary border-2 " : "";
     const scale = useSelector((state: State) => state.ui.scale);
     const style: any = options?.nested ? null : boxToPosition({
         scale: scale + "",
@@ -40,7 +40,7 @@ export function RowColEditor(props: {
     const { layout, onChange } = props;
     return <div class="flex flex-row gap-4 items-center">
         <div>Pos</div>
-        <BoxRemEditor component={layout} onChange={props.onChange}/>
+        <BoxRemEditor component={layout} onChange={onChange}/>
         <div>Align</div>
         <AlignSelect component={layout} field={"align"} onChange={onChange} />
         <div>Justify</div>

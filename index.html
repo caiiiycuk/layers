@@ -19,7 +19,10 @@
 
 <body>
     <div class="flex flex-row flex-wrap gap-2 overflow-hidden">
-        <div id="layers" class="relative border border-base-300 self-center"></div>
+        <div class="flex flex-col gap-2 items-end">
+          <div id="layers" class="relative border border-base-300 self-center"></div>
+          <button id="toggle" class="btn btn-xs min-w-max">Toggle Editor</button>
+        </div>
         <div id="editor" class="border border-base-300 flex-grow"></div>
     </div>
     <script type="module" src="/src/main.tsx"></script>
@@ -35,125 +38,192 @@
   {
     "layout": [
       {
-        "tag": "row",
-        "layout": [
-          {
-            "tag": "button",
-            "action": "edge-left-up",
-            "uid": 31
-          }
-        ],
-        "uid": 30
-      },
-      {
-        "tag": "row",
-        "layout": [
-          {
-            "tag": "button",
-            "action": "edge-right-up",
-            "uid": 33
-          }
-        ],
-        "uid": 32,
-        "right": 0
-      },
-      {
-        "tag": "row",
-        "layout": [
-          {
-            "tag": "button",
-            "action": "edge-left-down",
-            "uid": 35
-          }
-        ],
-        "uid": 34,
-        "bottom": 1
-      },
-      {
-        "tag": "row",
-        "layout": [
-          {
-            "tag": "button",
-            "action": "edge-right-down",
-            "uid": 37
-          }
-        ],
-        "uid": 36,
-        "right": 0,
-        "bottom": 0
-      },
-      {
-        "tag": "row",
-        "layout": [
-          {
-            "tag": "button",
-            "action": "edge-up",
-            "uid": 2
-          }
-        ],
-        "uid": 1,
-        "left": 1,
-        "right": 1,
-        "justify": "center"
-      },
-      {
-        "tag": "row",
-        "layout": [
-          {
-            "tag": "button",
-            "action": "edge-down",
-            "uid": 4
-          }
-        ],
-        "uid": 3,
-        "left": 0,
-        "right": 0,
-        "bottom": 1,
-        "justify": "center"
-      },
-      {
-        "tag": "col",
-        "layout": [
-          {
-            "tag": "button",
-            "action": "edge-left",
-            "uid": 6
-          }
-        ],
-        "uid": 5,
-        "top": 0,
-        "bottom": 0,
-        "justify": "center"
-      },
-      {
-        "tag": "col",
+        "tag": "sensor",
         "layout": [
           {
             "tag": "button",
             "action": "edge-right",
+            "uid": 2
+          },
+          {
+            "tag": "button",
+            "action": "edge-right-down",
+            "uid": 3
+          },
+          {
+            "tag": "button",
+            "action": "edge-down",
+            "uid": 4
+          },
+          {
+            "tag": "button",
+            "action": "edge-left-down",
+            "uid": 5
+          },
+          {
+            "tag": "button",
+            "action": "edge-left",
+            "uid": 6
+          },
+          {
+            "tag": "button",
+            "action": "edge-left-up",
+            "uid": 7
+          },
+          {
+            "tag": "button",
+            "action": "edge-up",
             "uid": 8
+          },
+          {
+            "tag": "button",
+            "action": "edge-right-up",
+            "uid": 9
           }
         ],
-        "uid": 7,
-        "top": 0,
-        "bottom": 0,
-        "right": 0,
-        "justify": "center"
+        "uid": 1,
+        "bottom": 2,
+        "left": 2
       }
     ]
   }
 ]
+
+// [
+//   {
+//     "layout": [
+//       {
+//         "tag": "row",
+//         "layout": [
+//           {
+//             "tag": "button",
+//             "action": "edge-left-up",
+//             "uid": 31
+//           }
+//         ],
+//         "uid": 30
+//       },
+//       {
+//         "tag": "row",
+//         "layout": [
+//           {
+//             "tag": "button",
+//             "action": "edge-right-up",
+//             "uid": 33
+//           }
+//         ],
+//         "uid": 32,
+//         "right": 0
+//       },
+//       {
+//         "tag": "row",
+//         "layout": [
+//           {
+//             "tag": "button",
+//             "action": "edge-left-down",
+//             "uid": 35
+//           }
+//         ],
+//         "uid": 34,
+//         "bottom": 1
+//       },
+//       {
+//         "tag": "row",
+//         "layout": [
+//           {
+//             "tag": "button",
+//             "action": "edge-right-down",
+//             "uid": 37
+//           }
+//         ],
+//         "uid": 36,
+//         "right": 0,
+//         "bottom": 0
+//       },
+//       {
+//         "tag": "row",
+//         "layout": [
+//           {
+//             "tag": "button",
+//             "action": "edge-up",
+//             "uid": 2
+//           }
+//         ],
+//         "uid": 1,
+//         "left": 1,
+//         "right": 1,
+//         "justify": "center"
+//       },
+//       {
+//         "tag": "row",
+//         "layout": [
+//           {
+//             "tag": "button",
+//             "action": "edge-down",
+//             "uid": 4
+//           }
+//         ],
+//         "uid": 3,
+//         "left": 0,
+//         "right": 0,
+//         "bottom": 1,
+//         "justify": "center"
+//       },
+//       {
+//         "tag": "col",
+//         "layout": [
+//           {
+//             "tag": "button",
+//             "action": "edge-left",
+//             "uid": 6
+//           }
+//         ],
+//         "uid": 5,
+//         "top": 0,
+//         "bottom": 0,
+//         "justify": "center"
+//       },
+//       {
+//         "tag": "col",
+//         "layout": [
+//           {
+//             "tag": "button",
+//             "action": "edge-right",
+//             "uid": 8
+//           }
+//         ],
+//         "uid": 7,
+//         "top": 0,
+//         "bottom": 0,
+//         "right": 0,
+//         "justify": "center"
+//       }
+//     ]
+//   }
+// ]
                 , 
                 {
                     action: (code, active) => {
                         console.log("Action", code, active);
                     },
                     pointer: (x, y, event) => {
-                        console.log("Mouse", x, y, event);
+                        // console.log("Mouse", x, y, event);
                     },
                 });
 
-            api.mountEditor(document.getElementById("editor"));
+            let mounted = false;
+            function toggleEditor() {
+              if (mounted) {
+                api.unmountEditor();
+              } else {
+                api.mountEditor(document.getElementById("editor"));
+              }
+
+              mounted = !mounted;
+            }
+            toggleEditor();
+
+            document.getElementById("toggle").addEventListener("click", toggleEditor);
             window.api = api;
         });
 

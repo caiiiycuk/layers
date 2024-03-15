@@ -1,5 +1,5 @@
 import { PayloadAction, createSlice } from "@reduxjs/toolkit";
-import { InstanceProps, Layer, Layout, isControlTag } from "../types";
+import { ControlBase, InstanceProps, Layer, Layout, isControlTag } from "../types";
 
 export interface PointerBaseProps {
     id: string,
@@ -18,23 +18,36 @@ const initialState: {
     layer: number,
     layers: Layer[],
     pointers: Pointers,
+    pointerEventConsumers: number,
     editor: boolean,
     active: { [uid: number]: number },
     activeHead: number | null,
+    uidAction: { [uid: number]: string[] },
 } = {
     scale: 1,
     layer: 0,
     layers: [],
     pointers: {},
-    editor: true,
+    pointerEventConsumers: 0,
+    editor: false,
     active: {},
     activeHead: null,
+    uidAction: {},
 };
 
 export const uiSlice = createSlice({
     name: "ui",
     initialState,
     reducers: {
+        consumePointerEvent: (state) => {
+            state.pointerEventConsumers++;
+        },
+        relasePointerEvent: (state) => {
+            state.pointerEventConsumers--;
+        },
+        setEditor: (state, payload: PayloadAction<boolean>) => {
+            state.editor = payload.payload;
+        },
         setScale: (state, payload: PayloadAction<number>) => {
             state.scale = payload.payload;
         },
@@ -45,8 +58,10 @@ export const uiSlice = createSlice({
             state.pointers = {};
         },
         setLayers: (state, payload: PayloadAction<Layer[]>) => {
-            assignIdsIfNeeded(payload.payload);
+            const uidAction = {};
+            assignIdsIfNeeded(payload.payload, uidAction);
             Object.assign(state, { layers: payload.payload });
+            state.uidAction = uidAction;
             state.pointers = {};
         },
         pointerDown: (state, payload: PayloadAction<PointerBaseProps>) => {
@@ -81,7 +96,7 @@ export const uiSlice = createSlice({
 
 
 let uid = 0;
-function assingIds(layout: Layout & Partial<InstanceProps>) {
+function assingIds(layout: Layout & Partial<InstanceProps>, uidAction: { [uid: number]: string[] }) {
     if (!layout.uid) {
         layout.uid = ++uid;
     }
@@ -90,16 +105,18 @@ function assingIds(layout: Layout & Partial<InstanceProps>) {
             if (!(next as Partial<InstanceProps>).uid) {
                 (next as Partial<InstanceProps>).uid = ++uid;
             }
+            const action = (next as ControlBase).action;
+            uidAction[(next as Partial<InstanceProps>).uid!] = typeof action === "string" ? [action] : action;
         } else {
-            assingIds(next as Layout);
+            assingIds(next as Layout, uidAction);
         }
     }
 }
 
-function assignIdsIfNeeded(layers: Layer[]) {
+function assignIdsIfNeeded(layers: Layer[], uidAction: { [uid: number]: string[] }) {
     for (const layer of layers) {
         for (const layout of layer.layout) {
-            assingIds(layout);
+            assingIds(layout, uidAction);
         }
     }
 }
