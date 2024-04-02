@@ -14,8 +14,11 @@ export interface ButtonProps extends ControlBase {
     size?: number,
 }
 
+const domParser = new DOMParser();
+
 export function Button(props: ButtonProps & InstanceProps) {
-    const { label, icon, uid } = props;
+    const { label, uid } = props;
+    const icon = props.icon ? props.icon.trim() : undefined;
     const size = props.size ?? defaultSize;
     const innerSize = Math.max(size - 1, 1);
     const zoneRef = useRef<HTMLDivElement>(null);
@@ -55,15 +58,24 @@ export function Button(props: ButtonProps & InstanceProps) {
     useEffect(() => {
         const el = btnRef?.current;
         if (icon && el) {
-            const img = document.createElement("img");
-            img.src = icon;
-            img.style.pointerEvents = "none";
-            img.style.width = size + "rem";
-            img.style.height = size + "rem";
-            el.appendChild(img);
-            return () => {
-                el.removeChild(img);
-            };
+            let iconEl: HTMLElement | SVGSVGElement | null = null;
+            if (icon.startsWith("<svg")) {
+                iconEl = domParser.parseFromString(icon, "image/svg+xml").querySelector("svg");
+            } else {
+                const img = document.createElement("img");
+                img.src = icon;
+                iconEl = img;
+            }
+
+            if (iconEl) {
+                iconEl.style.pointerEvents = "none";
+                iconEl.style.width = innerSize * 0.75 + "rem";
+                iconEl.style.height = innerSize * 0.75 + "rem";
+                el.appendChild(iconEl);
+                return () => {
+                    el.removeChild(iconEl!);
+                };
+            }
         }
     }, [btnRef?.current, icon]);
 
